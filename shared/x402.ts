@@ -4,11 +4,19 @@ import { HTTPFacilitatorClient } from "@x402/core/server";
 
 export const WALLET_ADDRESS = "0x52e5B77b02F115FD7fC2D7E740971AEa85880808";
 
-// Base mainnet
-export const NETWORK = "eip155:8453";
+// Switch to mainnet once CDP API key is set:
+//   NETWORK = "eip155:8453"
+//   facilitator url = "https://api.cdp.coinbase.com/platform/v2/x402"
+const USE_TESTNET = !process.env.CDP_API_KEY;
+
+export const NETWORK = USE_TESTNET ? "eip155:84532" : "eip155:8453";
+
+const facilitatorUrl = USE_TESTNET
+  ? "https://www.x402.org/facilitator"
+  : "https://api.cdp.coinbase.com/platform/v2/x402";
 
 const facilitatorClient = new HTTPFacilitatorClient({
-  url: "https://www.x402.org/facilitator",
+  url: facilitatorUrl,
 });
 
 export const resourceServer = new x402ResourceServer(facilitatorClient)
