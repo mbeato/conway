@@ -40,6 +40,9 @@ function pickHeaders(headers: Headers): Record<string, string> {
 }
 
 function resolveLocation(location: string, currentUrl: string): string {
+  if (location.length > 2048) {
+    throw new Error("Location header exceeds maximum length");
+  }
   const resolved = new URL(location, currentUrl);
   if (resolved.protocol !== "http:" && resolved.protocol !== "https:") {
     throw new Error("Redirect to unsupported scheme");
@@ -168,7 +171,7 @@ export async function traceRedirectChain(
     // SSRF check for each hop
     const check = validateExternalUrl(currentUrl);
     if ("error" in check) {
-      console.error(`[redirect-chain] Unsafe URL at hop ${chain.length + 1}: ${check.error} (${currentUrl})`);
+      console.error(`[redirect-chain] Blocked URL at hop ${chain.length + 1}: ${check.error}`);
       throw new Error(`Redirect chain contains a disallowed URL at hop ${chain.length + 1}`);
     }
 
@@ -210,7 +213,7 @@ export async function traceRedirectChain(
         headers: {},
       });
       const errorMsg = err?.name === "TimeoutError" ? "Request timed out" : (err?.message || "Network error");
-      console.error(`[redirect-chain] Failed to fetch ${currentUrl}: ${errorMsg}`);
+      console.error(`[redirect-chain] Failed to fetch at hop ${chain.length}: ${errorMsg}`);
       throw new Error(`Failed to reach destination at hop ${chain.length}: ${errorMsg}`);
     }
     const latencyMs = Math.round(performance.now() - start);
@@ -234,7 +237,7 @@ export async function traceRedirectChain(
     }
 
     if (!location) {
-      console.error(`[redirect-chain] Redirect ${statusCode} at ${currentUrl} missing Location header`);
+      console.error(`[redirect-chain] Redirect ${statusCode} at hop ${chain.length} missing Location header`);
       throw new Error(`Redirect at hop ${chain.length} missing Location header`);
     }
 

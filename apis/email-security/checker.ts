@@ -218,7 +218,7 @@ async function countRecursiveIncludes(
     const spf = flat.find((r) => r.startsWith("v=spf1"));
     if (!spf) return 0;
 
-    const includes = spf.match(/include:([^\s]+)/g) || [];
+    const includes = (spf.match(/include:([^\s]+)/g) || []).slice(0, 50);
     let count = includes.length;
 
     for (const inc of includes) {

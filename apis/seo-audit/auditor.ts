@@ -132,7 +132,7 @@ async function fetchPage(url: string): Promise<FetchedPage> {
     contentType.includes("text/html") ||
     contentType.includes("text/xhtml") ||
     contentType.includes("application/xhtml+xml");
-  if (contentType && !isHtml) {
+  if (!contentType || !isHtml) {
     throw new Error(`URL returned non-HTML content type: ${contentType}`);
   }
 

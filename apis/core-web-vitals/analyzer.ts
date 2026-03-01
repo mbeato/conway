@@ -107,7 +107,7 @@ async function callPSI(url: string, categories: string[]): Promise<any> {
     } catch {
       console.error(`[callPSI] Google PSI error ${response.status}: ${body.slice(0, 500)}`);
     }
-    throw new Error(`Analysis failed (upstream error ${response.status})`);
+    throw new Error("Analysis failed (upstream error)");
   }
 
   return response.json();

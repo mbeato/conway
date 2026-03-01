@@ -347,10 +347,11 @@ function checkXRobotsTag(headers: Headers): XRobotsTagCheck {
     return { found: false, value: null, noindex: false, nofollow: false };
   }
 
-  const lower = value.toLowerCase();
+  const sanitized = value.replace(/[\r\n\t\x00-\x1f\x7f]/g, " ").trim().slice(0, 512);
+  const lower = sanitized.toLowerCase();
   return {
     found: true,
-    value,
+    value: sanitized,
     noindex: lower.includes("noindex"),
     nofollow: lower.includes("nofollow"),
   };
