@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkPresence } from "./checker";
@@ -36,9 +36,18 @@ app.get("/", (c) => {
 app.use(
   paymentMiddleware(
     {
-      "GET /check": paidRoute(
+      "GET /check": paidRouteWithDiscovery(
         "$0.005",
-        "Check brand/product name availability across domains, GitHub, npm, PyPI, Reddit"
+        "Check brand/product name availability across domains, GitHub, npm, PyPI, Reddit",
+        {
+          input: { name: "example" },
+          inputSchema: {
+            properties: {
+              name: { type: "string", description: "Brand/product name to check" },
+            },
+            required: ["name"],
+          },
+        }
       ),
     },
     resourceServer

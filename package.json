@@ -11,8 +11,10 @@
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.44.1",
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@x402/core": "^2.5.0",
     "@x402/evm": "^2.5.0",
+    "@x402/extensions": "^2.5.0",
     "@x402/hono": "^2.5.0",
     "hono": "^4.12.3"
   }

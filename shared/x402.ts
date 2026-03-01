@@ -1,6 +1,7 @@
 import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { HTTPFacilitatorClient } from "@x402/core/server";
+import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 
 const WALLET_ADDRESS_RAW = process.env.WALLET_ADDRESS;
 if (!WALLET_ADDRESS_RAW) {
@@ -92,6 +93,22 @@ export function paidRoute(price: string, description: string) {
     ],
     description,
     mimeType: "application/json",
+  };
+}
+
+interface DiscoveryConfig {
+  input: Record<string, unknown>;
+  inputSchema: Record<string, unknown>;
+  output?: { example: Record<string, unknown> };
+  bodyType?: "json";
+}
+
+export function paidRouteWithDiscovery(price: string, description: string, discovery: DiscoveryConfig) {
+  return {
+    ...paidRoute(price, description),
+    extensions: {
+      ...declareDiscoveryExtension(discovery),
+    },
   };
 }
 

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 
@@ -52,8 +52,36 @@ app.get("/", (c) => {
 app.use(
   paymentMiddleware(
     {
-      "POST /build": paidRoute(API_PRICE_STR, "Construct regex from JSON structure, get pattern and flags."),
-      "POST /test": paidRoute(API_PRICE_STR, "Test a regex pattern (and flags) against input strings."),
+      "POST /build": paidRouteWithDiscovery(
+        API_PRICE_STR,
+        "Construct regex from JSON structure, get pattern and flags.",
+        {
+          bodyType: "json",
+          input: { pattern: "\\d+", flags: "g" },
+          inputSchema: {
+            properties: {
+              pattern: { type: "string" },
+              flags: { type: "string" },
+            },
+            required: ["pattern"],
+          },
+        }
+      ),
+      "POST /test": paidRouteWithDiscovery(
+        API_PRICE_STR,
+        "Test a regex pattern (and flags) against input strings.",
+        {
+          bodyType: "json",
+          input: { pattern: "\\d+", testString: "abc123" },
+          inputSchema: {
+            properties: {
+              pattern: { type: "string" },
+              testString: { type: "string" },
+            },
+            required: ["pattern", "testString"],
+          },
+        }
+      ),
     },
     resourceServer
   )

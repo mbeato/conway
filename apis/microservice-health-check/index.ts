@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkServicesHealth } from "./service-checker";
@@ -36,9 +36,19 @@ app.get("/", c => c.json({
 app.use(
   paymentMiddleware(
     {
-      "POST /check": paidRoute(
+      "POST /check": paidRouteWithDiscovery(
         PRICE,
-        "Monitor health and response times of up to 10 microservices per call. Accessible via POST /check with JSON { services: [urls...] }."
+        "Monitor health and response times of up to 10 microservices per call. Accessible via POST /check with JSON { services: [urls...] }.",
+        {
+          bodyType: "json",
+          input: { services: ["https://example.com/health"] },
+          inputSchema: {
+            properties: {
+              services: { type: "array", items: { type: "string" } },
+            },
+            required: ["services"],
+          },
+        }
       ),
     },
     resourceServer

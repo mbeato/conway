@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkFavicon } from "./checker";
@@ -38,9 +38,18 @@ app.get("/", (c) => {
 app.use(
   paymentMiddleware(
     {
-      "GET /check": paidRoute(
+      "GET /check": paidRouteWithDiscovery(
         "$0.002",
-        "Check if a given website URL has a favicon, returns favicon's existence, URL, and HTTP status."
+        "Check if a given website URL has a favicon, returns favicon's existence, URL, and HTTP status.",
+        {
+          input: { url: "https://example.com" },
+          inputSchema: {
+            properties: {
+              url: { type: "string", description: "URL to check for favicon" },
+            },
+            required: ["url"],
+          },
+        }
       ),
     },
     resourceServer

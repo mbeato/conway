@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { generateMockJwt } from "./jwt";
@@ -61,9 +61,20 @@ app.get("/", (c) => {
 app.use(
   paymentMiddleware(
     {
-      "POST /generate": paidRoute(
+      "POST /generate": paidRouteWithDiscovery(
         "$0.001",
-        "Generate a mock JWT signed by supplied secret (HS256) for development/testing."
+        "Generate a mock JWT signed by supplied secret (HS256) for development/testing.",
+        {
+          bodyType: "json",
+          input: { payload: { sub: "user123" }, secret: "test-secret" },
+          inputSchema: {
+            properties: {
+              payload: { type: "object" },
+              secret: { type: "string" },
+            },
+            required: ["payload", "secret"],
+          },
+        }
       ),
     },
     resourceServer

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { generateSwagger } from "./swagger";
@@ -55,9 +55,21 @@ app.get("/", (c) => {
 app.use(
   paymentMiddleware(
     {
-      "POST /generate": paidRoute(
+      "POST /generate": paidRouteWithDiscovery(
         "$0.002",
-        "Generate basic Swagger documentation for an API path or endpoint."
+        "Generate basic Swagger documentation for an API path or endpoint.",
+        {
+          bodyType: "json",
+          input: { path: "/api/users", method: "GET", summary: "List users" },
+          inputSchema: {
+            properties: {
+              path: { type: "string" },
+              method: { type: "string" },
+              summary: { type: "string" },
+            },
+            required: ["path", "method"],
+          },
+        }
       ),
     },
     resourceServer

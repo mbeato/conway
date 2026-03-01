@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkHttpStatus } from "./http-check";
@@ -39,9 +39,19 @@ app.get("/", (c) => {
 app.use(
   paymentMiddleware(
     {
-      "GET /check": paidRoute(
+      "GET /check": paidRouteWithDiscovery(
         PRICE,
-        "Checks the HTTP status code of a given URL and compares to expected code"
+        "Checks the HTTP status code of a given URL and compares to expected code",
+        {
+          input: { url: "https://example.com", expected: 200 },
+          inputSchema: {
+            properties: {
+              url: { type: "string" },
+              expected: { type: "integer", description: "Expected HTTP status code" },
+            },
+            required: ["url"],
+          },
+        }
       ),
     },
     resourceServer

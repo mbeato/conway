@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { parseRobotsTxt, analyzeRobotsTxt } from "./parser";
@@ -38,9 +38,18 @@ app.get("/", (c) => {
 app.use(
   paymentMiddleware(
     {
-      "GET /analyze": paidRoute(
+      "GET /analyze": paidRouteWithDiscovery(
         "$0.002",
-        "Fetch, parse and analyze the robots.txt of a given website"
+        "Fetch, parse and analyze the robots.txt of a given website",
+        {
+          input: { url: "https://example.com" },
+          inputSchema: {
+            properties: {
+              url: { type: "string", description: "Website URL to analyze robots.txt" },
+            },
+            required: ["url"],
+          },
+        }
       ),
     },
     resourceServer

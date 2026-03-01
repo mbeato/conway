@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import {
   paymentMiddleware,
-  paidRoute,
+  paidRouteWithDiscovery,
   resourceServer
 } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
@@ -52,9 +52,19 @@ app.get("/", c => {
 app.use(
   paymentMiddleware(
     {
-      "POST /validate": paidRoute(
+      "POST /validate": paidRouteWithDiscovery(
         PRICE,
-        "YAML syntax and schema validation (returns errors or parsed output)"
+        "YAML syntax and schema validation (returns errors or parsed output)",
+        {
+          bodyType: "json",
+          input: { yaml: "foo: bar" },
+          inputSchema: {
+            properties: {
+              yaml: { type: "string", description: "YAML string to validate" },
+            },
+            required: ["yaml"],
+          },
+        }
       ),
     },
     resourceServer

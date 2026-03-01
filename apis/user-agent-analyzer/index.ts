@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { paymentMiddleware, paidRoute, resourceServer } from "../../shared/x402";
+import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { analyzeUserAgent, type UserAgentResult } from "./parser";
@@ -40,9 +40,18 @@ app.get("/", (c) =>
 app.use(
   paymentMiddleware(
     {
-      "GET /analyze": paidRoute(
+      "GET /analyze": paidRouteWithDiscovery(
         "$0.002",
-        "Analyze and extract browser/os information from a User-Agent string"
+        "Analyze and extract browser/os information from a User-Agent string",
+        {
+          input: { ua: "Mozilla/5.0..." },
+          inputSchema: {
+            properties: {
+              ua: { type: "string", description: "User-Agent string to parse" },
+            },
+            required: ["ua"],
+          },
+        }
       ),
     },
     resourceServer

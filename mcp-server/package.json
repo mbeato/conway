@@ -1,0 +1,11 @@
+{
+  "name": "@apimesh/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for APIMesh — 12 x402-payable API tools",
+  "main": "index.ts",
+  "bin": { "apimesh-mcp": "./index.ts" },
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest"
+  }
+}
