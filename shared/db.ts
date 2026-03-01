@@ -15,7 +15,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS api_registry (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
-    port INTEGER UNIQUE NOT NULL,
+    port INTEGER NOT NULL,
     subdomain TEXT UNIQUE NOT NULL,
     status TEXT DEFAULT 'active',
     created_at TEXT DEFAULT (datetime('now')),
@@ -46,7 +46,7 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS backlog (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
+    name TEXT UNIQUE NOT NULL,
     description TEXT,
     demand_score REAL DEFAULT 0,
     effort_score REAL DEFAULT 0,
@@ -115,4 +115,93 @@ export function registerApi(name: string, port: number, subdomain: string) {
      VALUES (?, ?, ?, datetime('now'))`,
     [name, port, subdomain]
   );
+}
+
+// --- Brain helper functions ---
+
+export interface BacklogItem {
+  id: number;
+  name: string;
+  description: string;
+  demand_score: number;
+  effort_score: number;
+  competition_score: number;
+  overall_score: number;
+  status: string;
+  created_at: string;
+}
+
+export function getTopBacklogItem(): BacklogItem | null {
+  return db.query(`
+    SELECT * FROM backlog
+    WHERE status = 'pending'
+    ORDER BY overall_score DESC
+    LIMIT 1
+  `).get() as BacklogItem | null;
+}
+
+export function updateBacklogStatus(id: number, status: string) {
+  db.run(`UPDATE backlog SET status = ? WHERE id = ?`, [status, id]);
+}
+
+export function insertBacklogItem(
+  name: string,
+  description: string,
+  demandScore: number,
+  effortScore: number,
+  competitionScore: number,
+  overallScore: number
+) {
+  db.run(
+    `INSERT OR IGNORE INTO backlog (name, description, demand_score, effort_score, competition_score, overall_score)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [name, description, demandScore, effortScore, competitionScore, overallScore]
+  );
+}
+
+export function backlogItemExists(name: string): boolean {
+  const row = db.query(`SELECT 1 FROM backlog WHERE name = ?`).get(name);
+  return !!row;
+}
+
+export interface ApiRegistryEntry {
+  id: number;
+  name: string;
+  port: number;
+  subdomain: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getActiveApis(): ApiRegistryEntry[] {
+  return db.query(`SELECT * FROM api_registry WHERE status = 'active'`).all() as ApiRegistryEntry[];
+}
+
+export function deactivateApi(name: string) {
+  db.run(`UPDATE api_registry SET status = 'inactive', updated_at = datetime('now') WHERE name = ?`, [name]);
+}
+
+export function getErrorRate(apiName: string, days: number = 7): { total: number; errors: number; rate: number } {
+  const result = db.query(`
+    SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status_code >= 500 THEN 1 ELSE 0 END) as errors
+    FROM requests
+    WHERE api_name = ? AND created_at > datetime('now', '-' || ? || ' days')
+  `).get(apiName, days) as { total: number; errors: number };
+  return {
+    total: result.total,
+    errors: result.errors ?? 0,
+    rate: result.total > 0 ? (result.errors ?? 0) / result.total : 0,
+  };
+}
+
+export function getApiRevenue(apiName: string, days: number = 7): number {
+  const result = db.query(`
+    SELECT COALESCE(SUM(amount_usd), 0) as total_usd
+    FROM revenue
+    WHERE api_name = ? AND created_at > datetime('now', '-' || ? || ' days')
+  `).get(apiName, days) as { total_usd: number };
+  return result.total_usd;
 }

@@ -74,7 +74,9 @@ app.onError((err, c) => {
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));
 
-console.log(`${API_NAME} listening on port ${PORT}`);
+export { app };
+
+if (import.meta.main) console.log(`${API_NAME} listening on port ${PORT}`);
 
 export default {
   port: PORT,

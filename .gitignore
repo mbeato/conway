@@ -37,3 +37,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 *.db
 *.db-wal
 *.db-shm
+
+# MCP config (contains API keys)
+.mcp.json
+
+# Brain test builds
+.test-builds
