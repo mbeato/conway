@@ -58,7 +58,7 @@ app.get("/dashboard", publicLimit, async (c) => {
     return new Response(await file.text(), {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'",
+        "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'",
         "X-Frame-Options": "DENY",
         "X-Content-Type-Options": "nosniff",
       },
