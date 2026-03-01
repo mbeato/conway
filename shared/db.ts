@@ -1,12 +1,13 @@
 import { Database } from "bun:sqlite";
 import { join } from "path";
-import { mkdirSync } from "fs";
 
-const DB_PATH = join(import.meta.dir, "..", "data", "agent.db");
-mkdirSync(join(import.meta.dir, "..", "data"), { recursive: true });
+const dataDir = join(import.meta.dir, "..", "data");
+Bun.spawnSync(["mkdir", "-p", dataDir]);
 
+const DB_PATH = join(dataDir, "agent.db");
 const db = new Database(DB_PATH, { create: true });
 db.exec("PRAGMA journal_mode=WAL;");
+db.exec("PRAGMA busy_timeout=5000;");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS api_registry (

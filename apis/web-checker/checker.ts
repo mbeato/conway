@@ -6,6 +6,22 @@ interface AvailabilityResult {
   error?: string;
 }
 
+function sanitizeNetworkError(e: unknown): string {
+  const err = e instanceof Error ? e : new Error(String(e));
+  if (err.name === "TimeoutError") return "timeout";
+  if ("code" in err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    const safe: Record<string, string> = {
+      ECONNREFUSED: "connection_refused",
+      ENOTFOUND: "dns_not_found",
+      ECONNRESET: "connection_reset",
+      ETIMEDOUT: "timeout",
+    };
+    return safe[code ?? ""] ?? "network_error";
+  }
+  return "network_error";
+}
+
 async function checkHttp(
   url: string,
   platform: string,
@@ -14,7 +30,7 @@ async function checkHttp(
   try {
     const res = await fetch(url, {
       method: "HEAD",
-      redirect: "follow",
+      redirect: "manual",
       signal: AbortSignal.timeout(5000),
     });
     return {
@@ -23,67 +39,66 @@ async function checkHttp(
       available: res.status === 404,
       url,
     };
-  } catch (e: any) {
-    if (e.name === "TimeoutError" || e.code === "ECONNREFUSED") {
-      return { platform, identifier, available: null, url, error: "timeout" };
+  } catch (e: unknown) {
+    return { platform, identifier, available: null, url, error: sanitizeNetworkError(e) };
+  }
+}
+
+async function checkReddit(slug: string): Promise<AvailabilityResult> {
+  const url = `https://www.reddit.com/r/${slug}/about.json`;
+  try {
+    const res = await fetch(url, {
+      redirect: "manual",
+      signal: AbortSignal.timeout(5000),
+      headers: { "User-Agent": "apimesh-checker/1.0" },
+    });
+    if (res.status === 404) {
+      return { platform: "reddit", identifier: slug, available: true, url };
     }
-    return { platform, identifier, available: null, url, error: e.message };
+    const data = (await res.json()) as any;
+    // Banned/private subs are NOT available for use
+    const isTaken = data.reason === "banned" || data.reason === "private";
+    const available = (data.error === 404 || (!data.data && !isTaken)) && !isTaken;
+    return { platform: "reddit", identifier: slug, available, url };
+  } catch (e: unknown) {
+    return { platform: "reddit", identifier: slug, available: null, url, error: sanitizeNetworkError(e) };
   }
 }
 
 async function checkDns(domain: string): Promise<AvailabilityResult> {
+  const dnsUrl = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`;
   try {
-    const res = await fetch(
-      `https://dns.google/resolve?name=${domain}&type=A`,
-      { signal: AbortSignal.timeout(5000) }
-    );
+    const res = await fetch(dnsUrl, { signal: AbortSignal.timeout(5000) });
     const data = (await res.json()) as any;
     const available = !data.Answer || data.Answer.length === 0;
-    return {
-      platform: "domain",
-      identifier: domain,
-      available,
-      url: `https://dns.google/resolve?name=${domain}&type=A`,
-    };
-  } catch (e: any) {
-    return {
-      platform: "domain",
-      identifier: domain,
-      available: null,
-      url: `https://dns.google/resolve?name=${domain}&type=A`,
-      error: e.message,
-    };
+    return { platform: "domain", identifier: domain, available, url: dnsUrl };
+  } catch (e: unknown) {
+    return { platform: "domain", identifier: domain, available: null, url: dnsUrl, error: sanitizeNetworkError(e) };
   }
 }
 
-export async function checkPresence(name: string): Promise<{
+// Expects a pre-sanitized slug (lowercase alphanumeric + hyphens only)
+export async function checkPresence(slug: string): Promise<{
   query: string;
   results: AvailabilityResult[];
   checkedAt: string;
 }> {
-  const slug = name.toLowerCase().replace(/[^a-z0-9-]/g, "");
-
   const checks = [
-    // Domains
     checkDns(`${slug}.com`),
     checkDns(`${slug}.io`),
     checkDns(`${slug}.xyz`),
     checkDns(`${slug}.dev`),
     checkDns(`${slug}.ai`),
-    // GitHub
     checkHttp(`https://github.com/${slug}`, "github-user", slug),
-    // npm
     checkHttp(`https://registry.npmjs.org/${slug}`, "npm", slug),
-    // PyPI
     checkHttp(`https://pypi.org/project/${slug}/`, "pypi", slug),
-    // Reddit
-    checkHttp(`https://www.reddit.com/r/${slug}/about.json`, "reddit", slug),
+    checkReddit(slug),
   ];
 
   const results = await Promise.all(checks);
 
   return {
-    query: name,
+    query: slug,
     results,
     checkedAt: new Date().toISOString(),
   };

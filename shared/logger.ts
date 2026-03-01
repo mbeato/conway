@@ -1,19 +1,34 @@
 import type { MiddlewareHandler } from "hono";
-import { logRequest } from "./db";
+import { logRequest, logRevenue } from "./db";
+import { NETWORK } from "./x402";
 
-export function apiLogger(apiName: string): MiddlewareHandler {
+export function apiLogger(apiName: string, priceUsd: number = 0): MiddlewareHandler {
   return async (c, next) => {
     const start = performance.now();
     await next();
     const ms = performance.now() - start;
 
-    const paid = c.res.headers.get("x-payment-verified") === "true";
-    const amount = parseFloat(c.res.headers.get("x-payment-amount") || "0");
-    const clientIp =
-      c.req.header("x-forwarded-for") ||
-      c.req.header("cf-connecting-ip") ||
-      "unknown";
+    // x402 sets PAYMENT-RESPONSE header after successful settlement
+    const paymentResponse = c.res.headers.get("PAYMENT-RESPONSE") || c.res.headers.get("X-PAYMENT-RESPONSE");
+    const paid = !!paymentResponse && c.res.status < 400;
+    const amount = paid ? priceUsd : 0;
+
+    // Trust x-real-ip set by Caddy — "direct" means request bypassed proxy
+    const clientIp = c.req.header("x-real-ip") || "direct";
 
     logRequest(apiName, c.req.path, c.req.method, c.res.status, ms, paid, amount, clientIp);
+
+    if (paid && amount > 0) {
+      // Attempt to extract txHash from settlement response
+      let txHash = "";
+      try {
+        const decoded = Buffer.from(paymentResponse!, "base64").toString("utf-8");
+        const settlement = JSON.parse(decoded);
+        txHash = settlement?.transaction ?? settlement?.txHash ?? "";
+      } catch {
+        // Settlement header may not be base64 JSON — log without txHash
+      }
+      logRevenue(apiName, amount, txHash, NETWORK);
+    }
   };
 }

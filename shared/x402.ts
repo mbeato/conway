@@ -2,7 +2,16 @@ import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 
-export const WALLET_ADDRESS = "0x52e5B77b02F115FD7fC2D7E740971AEa85880808";
+const WALLET_ADDRESS_RAW = process.env.WALLET_ADDRESS;
+if (!WALLET_ADDRESS_RAW) {
+  console.error("FATAL: WALLET_ADDRESS env var not set");
+  process.exit(1);
+}
+if (!/^0x[0-9a-fA-F]{40}$/.test(WALLET_ADDRESS_RAW)) {
+  console.error("FATAL: WALLET_ADDRESS is not a valid EVM address");
+  process.exit(1);
+}
+export const WALLET_ADDRESS = WALLET_ADDRESS_RAW;
 
 const CDP_KEY_ID = process.env.CDP_API_KEY_ID;
 const CDP_KEY_SECRET = process.env.CDP_API_KEY_SECRET;
@@ -40,14 +49,24 @@ function buildTestnetFacilitator() {
   });
 }
 
-const facilitatorClient = USE_MAINNET
-  ? await buildCdpFacilitator()
-  : buildTestnetFacilitator();
+let facilitatorClient: HTTPFacilitatorClient;
+if (USE_MAINNET) {
+  try {
+    facilitatorClient = await buildCdpFacilitator();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`FATAL: CDP facilitator init failed: ${message}`);
+    process.exit(1);
+  }
+} else {
+  facilitatorClient = buildTestnetFacilitator();
+}
 
 export const resourceServer = new x402ResourceServer(facilitatorClient)
   .register(NETWORK, new ExactEvmScheme());
 
 console.log(`x402: ${USE_MAINNET ? "MAINNET (Base)" : "TESTNET (Base Sepolia)"}`);
+console.log(`x402: payTo=${WALLET_ADDRESS}`);
 
 export function paidRoute(price: string, description: string) {
   return {
