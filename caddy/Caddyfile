@@ -10,8 +10,19 @@
     }
 }
 
+(dashboard_headers) {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'"
+        Permissions-Policy "geolocation=(), camera=(), microphone=()"
+        -Server
+    }
+}
+
 apimesh.xyz {
-    import security_headers
     request_body {
         max_size 64KB
     }
@@ -27,16 +38,19 @@ apimesh.xyz {
     }
 
     handle /dashboard {
+        import dashboard_headers
         reverse_proxy localhost:3000 {
             header_up X-Real-IP {remote_host}
             header_up -X-Forwarded-For
         }
-        header Content-Security-Policy "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'"
     }
 
-    reverse_proxy localhost:3000 {
-        header_up X-Real-IP {remote_host}
-        header_up -X-Forwarded-For
+    handle {
+        import security_headers
+        reverse_proxy localhost:3000 {
+            header_up X-Real-IP {remote_host}
+            header_up -X-Forwarded-For
+        }
     }
 }
 
