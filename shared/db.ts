@@ -193,12 +193,19 @@ export function getErrorRate(apiName: string, days: number = 7): { total: number
       SUM(CASE WHEN status_code >= 500 THEN 1 ELSE 0 END) as errors
     FROM requests
     WHERE api_name = ? AND created_at > datetime('now', '-' || ? || ' days')
-  `).get(apiName, days) as { total: number; errors: number };
+  `).get(apiName, safeDays(days)) as { total: number; errors: number };
   return {
     total: result.total,
     errors: result.errors ?? 0,
     rate: result.total > 0 ? (result.errors ?? 0) / result.total : 0,
   };
+}
+
+export function getRecentRequests(limit: number = 20) {
+  return db.query(`
+    SELECT api_name, endpoint, method, status_code, response_time_ms, paid, amount_usd, created_at
+    FROM requests ORDER BY created_at DESC LIMIT ?
+  `).all(Math.min(limit, 100));
 }
 
 export function getApiRevenue(apiName: string, days: number = 7): number {

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APIMesh Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+  a { color: #7aa2f7; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* Login */
+  #login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #login h1 { font-size: 20px; color: #7aa2f7; }
+  #login input {
+    background: #1a1a2e;
+    border: 1px solid #333;
+    color: #e0e0e0;
+    padding: 10px 14px;
+    width: 340px;
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 4px;
+  }
+  #login input:focus { outline: none; border-color: #7aa2f7; }
+  #login button {
+    background: #7aa2f7;
+    color: #0a0a0a;
+    border: none;
+    padding: 10px 24px;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+  #login button:hover { background: #5d8de6; }
+  #login-error { color: #f7768e; font-size: 13px; min-height: 18px; }
+
+  /* Dashboard */
+  #dashboard { display: none; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  #dashboard.active { display: block; }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .header h1 { font-size: 18px; color: #7aa2f7; }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    color: #888;
+  }
+  .header-right button {
+    background: transparent;
+    border: 1px solid #333;
+    color: #888;
+    padding: 4px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .header-right button:hover { border-color: #f7768e; color: #f7768e; }
+  .auto-refresh-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .auto-refresh-toggle input { cursor: pointer; }
+
+  /* Cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: #1a1a2e;
+    border: 1px solid #222;
+    border-radius: 6px;
+    padding: 20px;
+  }
+  .card-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .card-value { font-size: 28px; font-weight: 700; color: #e0e0e0; }
+  .card-value.revenue { color: #9ece6a; }
+
+  /* Tables */
+  .section { margin-bottom: 24px; }
+  .section-title { font-size: 14px; color: #888; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #333;
+    color: #888;
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid #1a1a2e; }
+  tr:hover td { background: #111122; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-active { background: #1a3a2a; color: #9ece6a; }
+  .badge-paid { background: #1a3a2a; color: #9ece6a; }
+  .badge-free { background: #2a2a1a; color: #888; }
+  .badge-ok { color: #9ece6a; }
+  .badge-err { color: #f7768e; }
+  .status-2xx { color: #9ece6a; }
+  .status-4xx { color: #e0af68; }
+  .status-5xx { color: #f7768e; }
+
+  .wallet { font-size: 11px; color: #555; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+
+  .loading { color: #555; text-align: center; padding: 40px; }
+  .error-msg { color: #f7768e; text-align: center; padding: 20px; }
+
+  @media (max-width: 600px) {
+    #dashboard { padding: 12px; }
+    .cards { grid-template-columns: 1fr 1fr; }
+    .card-value { font-size: 22px; }
+    table { font-size: 12px; }
+    th, td { padding: 6px 8px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>APIMesh Dashboard</h1>
+  <input type="password" id="token-input" placeholder="Enter dashboard token" autocomplete="off" />
+  <button id="login-btn">Authenticate</button>
+  <div id="login-error"></div>
+</div>
+
+<div id="dashboard">
+  <div class="header">
+    <h1>APIMesh Dashboard</h1>
+    <div class="header-right">
+      <span class="wallet" id="wallet"></span>
+      <span id="last-updated"></span>
+      <label class="auto-refresh-toggle">
+        <input type="checkbox" id="auto-refresh" checked />
+        Auto-refresh
+      </label>
+      <button id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Revenue 7d</div>
+      <div class="card-value revenue" id="rev-7d">--</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Revenue 30d</div>
+      <div class="card-value revenue" id="rev-30d">--</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Active APIs</div>
+      <div class="card-value" id="active-apis">--</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Requests 7d</div>
+      <div class="card-value" id="total-requests">--</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">APIs</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Requests 7d</th>
+          <th>Error Rate</th>
+          <th>Revenue 7d</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="apis-table"><tr><td colspan="5" class="loading">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Recent Requests</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>API</th>
+          <th>Endpoint</th>
+          <th>Method</th>
+          <th>Status</th>
+          <th>Response</th>
+          <th>Paid</th>
+        </tr>
+      </thead>
+      <tbody id="requests-table"><tr><td colspan="7" class="loading">Loading...</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const BASE = location.origin;
+let refreshInterval = null;
+
+function getToken() { return sessionStorage.getItem('dashboard_token'); }
+function setToken(t) { sessionStorage.setItem('dashboard_token', t); }
+function clearToken() { sessionStorage.removeItem('dashboard_token'); }
+
+async function doLogin() {
+  const input = document.getElementById('token-input');
+  const err = document.getElementById('login-error');
+  const token = input.value.trim();
+  if (!token) { err.textContent = 'Token required'; return; }
+
+  try {
+    const res = await fetch(BASE + '/api/stats', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.status === 401) { err.textContent = 'Invalid token'; return; }
+    if (!res.ok) { err.textContent = 'Error: ' + res.status; return; }
+    setToken(token);
+    input.value = '';
+    err.textContent = '';
+    showDashboard();
+  } catch (e) {
+    err.textContent = 'Connection failed';
+  }
+}
+
+document.getElementById('token-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') doLogin();
+});
+document.getElementById('login-btn').addEventListener('click', doLogin);
+document.getElementById('logout-btn').addEventListener('click', doLogout);
+
+function doLogout() {
+  clearToken();
+  stopRefresh();
+  document.getElementById('login').style.display = 'flex';
+  document.getElementById('dashboard').classList.remove('active');
+}
+
+function showDashboard() {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('dashboard').classList.add('active');
+  loadStats();
+  startRefresh();
+}
+
+function startRefresh() {
+  stopRefresh();
+  if (document.getElementById('auto-refresh').checked) {
+    refreshInterval = setInterval(loadStats, 60000);
+  }
+}
+
+function stopRefresh() {
+  if (refreshInterval) { clearInterval(refreshInterval); refreshInterval = null; }
+}
+
+document.getElementById('auto-refresh').addEventListener('change', () => {
+  if (document.getElementById('auto-refresh').checked) startRefresh();
+  else stopRefresh();
+});
+
+async function loadStats() {
+  const token = getToken();
+  if (!token) return;
+
+  try {
+    const res = await fetch(BASE + '/api/stats', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.status === 401) { doLogout(); return; }
+    if (!res.ok) return;
+    const data = await res.json();
+    render(data);
+  } catch (e) {
+    console.error('Failed to load stats:', e);
+  }
+}
+
+function fmt$(v) { return '$' + Number(v || 0).toFixed(4); }
+function fmtN(v) { return Number(v || 0).toLocaleString(); }
+function fmtPct(v) { return (Number(v || 0) * 100).toFixed(1) + '%'; }
+function fmtTime(iso) {
+  if (!iso) return '--';
+  const d = new Date(iso + 'Z');
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+function statusClass(code) {
+  if (code >= 500) return 'status-5xx';
+  if (code >= 400) return 'status-4xx';
+  return 'status-2xx';
+}
+
+function render(data) {
+  document.getElementById('rev-7d').textContent = fmt$(data.revenue_7d);
+  document.getElementById('rev-30d').textContent = fmt$(data.revenue_30d);
+  document.getElementById('active-apis').textContent = data.apis ? data.apis.length : 0;
+  document.getElementById('total-requests').textContent = fmtN(data.total_requests_7d);
+  document.getElementById('wallet').textContent = data.wallet || '';
+  document.getElementById('last-updated').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+  // APIs table
+  const apisBody = document.getElementById('apis-table');
+  if (!data.apis || data.apis.length === 0) {
+    apisBody.innerHTML = '<tr><td colspan="5" style="color:#555">No active APIs</td></tr>';
+  } else {
+    apisBody.innerHTML = data.apis.map(a => `<tr>
+      <td><a href="https://${esc(a.subdomain)}.apimesh.xyz" target="_blank">${esc(a.name)}</a></td>
+      <td>${fmtN(a.requests_7d)}</td>
+      <td>${fmtPct(a.error_rate_7d?.rate)}</td>
+      <td>${fmt$(a.revenue_7d)}</td>
+      <td><span class="badge badge-active">${esc(a.status)}</span></td>
+    </tr>`).join('');
+  }
+
+  // Recent requests table
+  const reqBody = document.getElementById('requests-table');
+  if (!data.recent_requests || data.recent_requests.length === 0) {
+    reqBody.innerHTML = '<tr><td colspan="7" style="color:#555">No recent requests</td></tr>';
+  } else {
+    reqBody.innerHTML = data.recent_requests.map(r => `<tr>
+      <td>${fmtTime(r.created_at)}</td>
+      <td>${esc(r.api_name)}</td>
+      <td>${esc(r.endpoint)}</td>
+      <td>${esc(r.method)}</td>
+      <td class="${statusClass(r.status_code)}">${Number.isFinite(r.status_code) ? r.status_code : '--'}</td>
+      <td>${Number.isFinite(r.response_time_ms) ? r.response_time_ms.toFixed(0) + 'ms' : '--'}</td>
+      <td>${r.paid ? '<span class="badge badge-paid">paid</span>' : '<span class="badge badge-free">free</span>'}</td>
+    </tr>`).join('');
+  }
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// Auto-login if token in session
+if (getToken()) showDashboard();
+</script>
+</body>
+</html>

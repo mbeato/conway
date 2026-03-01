@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bearerAuth } from "hono/bearer-auth";
 import { resolve, join } from "path";
-import db, { getRevenueByApi, getTotalRevenue } from "../../shared/db";
+import db, { getRevenueByApi, getTotalRevenue, getRequestCount, getErrorRate, getApiRevenue, getRecentRequests, getActiveApis } from "../../shared/db";
 import { WALLET_ADDRESS } from "../../shared/x402";
 import { rateLimit } from "../../shared/rate-limit";
 
@@ -51,6 +51,22 @@ app.get("/.well-known/*", publicLimit, async (c) => {
   return c.json({ error: "Not found" }, 404);
 });
 
+// Dashboard UI — public, no auth
+app.get("/dashboard", publicLimit, async (c) => {
+  const file = Bun.file(join(import.meta.dir, "dashboard.html"));
+  if (await file.exists()) {
+    return new Response(await file.text(), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
+  }
+  return c.text("Dashboard not found", 404);
+});
+
 // CORS before rate limiter so 429 responses include CORS headers
 app.use("*", cors({
   origin: process.env.CORS_ORIGIN || "https://apimesh.xyz",
@@ -79,6 +95,35 @@ app.get("/", (c) => {
       by_api: revenueByApi,
     },
     apis,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/api/stats", (c) => {
+  const revenue7d = getTotalRevenue(7);
+  const revenue30d = getTotalRevenue(30);
+  const revenueByApi = getRevenueByApi(7);
+  const activeApis = getActiveApis();
+
+  const apis = activeApis.map((api) => ({
+    name: api.name,
+    subdomain: api.subdomain,
+    status: api.status,
+    requests_7d: getRequestCount(api.name, 7).count,
+    error_rate_7d: getErrorRate(api.name, 7),
+    revenue_7d: getApiRevenue(api.name, 7),
+  }));
+
+  const totalRequests7d = apis.reduce((sum, a) => sum + a.requests_7d, 0);
+
+  return c.json({
+    revenue_7d: revenue7d.total_usd,
+    revenue_30d: revenue30d.total_usd,
+    revenue_by_api: revenueByApi,
+    apis,
+    total_requests_7d: totalRequests7d,
+    recent_requests: getRecentRequests(20),
+    wallet: WALLET_ADDRESS,
     timestamp: new Date().toISOString(),
   });
 });
