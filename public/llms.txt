@@ -1,6 +1,6 @@
 # apimesh.xyz
 
-> 5 curated x402-payable API tools for AI agents. Pay per call with USDC on Base network.
+> 12 curated x402-payable API tools for AI agents. Pay per call with USDC on Base network.
 
 ## Tools
 
@@ -31,10 +31,52 @@
 - **Price:** $0.001 per call
 - **What it does:** Fetches and parses a website's robots.txt into structured rules, sitemaps, and crawl directives.
 
+### core_web_vitals
+- **Endpoint:** GET https://core-web-vitals.apimesh.xyz/check?url={url}
+- **Price:** $0.005 per call
+- **What it does:** Gets Core Web Vitals and Lighthouse scores for any URL. Returns LCP, CLS, INP field data plus performance, accessibility, best-practices, and SEO scores with letter grades.
+- **Free preview:** GET https://core-web-vitals.apimesh.xyz/preview?url={url} — returns performance score and grade only, no payment required.
+
+### security_headers
+- **Endpoint:** GET https://security-headers.apimesh.xyz/check?url={url}
+- **Price:** $0.005 per call
+- **What it does:** Audits 10 HTTP security headers (CSP, HSTS, X-Frame-Options, etc.) with weighted grading A+ through F and remediation suggestions.
+- **Free preview:** GET https://security-headers.apimesh.xyz/preview?url={url} — checks HSTS, X-Frame-Options, and X-Content-Type-Options for free.
+
+### redirect_chain
+- **Endpoint:** GET https://redirect-chain.apimesh.xyz/check?url={url}
+- **Price:** $0.001 per call
+- **What it does:** Traces the full redirect chain for any URL with per-hop status codes, latency, and loop detection. Extracts the final canonical URL.
+- **Free preview:** GET https://redirect-chain.apimesh.xyz/preview?url={url} — traces up to 5 hops for free, no payment required.
+
+### email_security
+- **Endpoint:** GET https://email-security.apimesh.xyz/check?domain={domain}
+- **Price:** $0.01 per call
+- **What it does:** Checks email security for any domain — SPF, DMARC, DKIM (probes 10 common selectors), and MX records with provider detection (Google, Microsoft 365, etc.).
+- **Free preview:** GET https://email-security.apimesh.xyz/preview?domain={domain} — checks SPF and DMARC only, no payment required.
+
+### seo_audit
+- **Endpoint:** GET https://seo-audit.apimesh.xyz/check?url={url}
+- **Price:** $0.003 per call
+- **What it does:** Comprehensive on-page SEO audit — title, meta description, headings, images, links, content, canonical, OG tags, JSON-LD, and robots directives with a 0-100 score.
+- **Free preview:** GET https://seo-audit.apimesh.xyz/preview?url={url} — returns title, meta, H1, and score for free.
+
+### indexability_checker
+- **Endpoint:** GET https://indexability.apimesh.xyz/check?url={url}
+- **Price:** $0.001 per call
+- **What it does:** 5-layer indexability analysis — robots.txt rules, HTTP status, meta robots, X-Robots-Tag, and canonical tag. Returns whether a URL is indexable and the blocking reason if not.
+- **Free preview:** GET https://indexability.apimesh.xyz/preview?url={url} — checks HTTP status and meta robots for free.
+
+### brand_assets
+- **Endpoint:** GET https://brand-assets.apimesh.xyz/check?domain={domain}
+- **Price:** $0.002 per call
+- **What it does:** Extracts brand assets from any domain — logo URL, favicon, theme colors, OG image, and site name. Discovers logos from SVG icons, apple-touch-icons, and Google Favicon API.
+- **Free preview:** GET https://brand-assets.apimesh.xyz/preview?domain={domain} — returns Google favicon URL for free.
+
 ## Payment
 
 All paid endpoints use the x402 payment protocol. Send USDC on Base (chain ID 8453).
-Each API has free `/health` and `/` info endpoints. Two tools offer free `/preview` endpoints for trying before paying.
+Each API has free `/health` and `/` info endpoints. Most tools offer free `/preview` endpoints for trying before paying.
 
 ## Discovery
 

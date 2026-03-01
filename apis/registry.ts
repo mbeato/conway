@@ -10,12 +10,13 @@ import { app as robotsTxtParser } from "./robots-txt-parser/index";
 import { app as mockJwtGenerator } from "./mock-jwt-generator/index";
 import { app as yamlValidator } from "./yaml-validator/index";
 import { app as swaggerDocsCreator } from "./swagger-docs-creator/index";
-
-
-
-
-
-
+import { app as coreWebVitals } from "./core-web-vitals/index";
+import { app as securityHeaders } from "./security-headers/index";
+import { app as redirectChain } from "./redirect-chain/index";
+import { app as emailSecurity } from "./email-security/index";
+import { app as seoAudit } from "./seo-audit/index";
+import { app as indexability } from "./indexability/index";
+import { app as brandAssets } from "./brand-assets/index";
 
 
 
@@ -33,4 +34,11 @@ export const registry: Record<string, Hono> = {
   "mock-jwt-generator": mockJwtGenerator,
   "yaml-validator": yamlValidator,
   "swagger-docs-creator": swaggerDocsCreator,
+  "core-web-vitals": coreWebVitals,
+  "security-headers": securityHeaders,
+  "redirect-chain": redirectChain,
+  "email-security": emailSecurity,
+  "seo-audit": seoAudit,
+  "indexability": indexability,
+  "brand-assets": brandAssets,
 };

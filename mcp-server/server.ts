@@ -87,7 +87,7 @@ function qs(params: Record<string, string | number | undefined>): string {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "apimesh",
-    version: "1.1.0",
+    version: "1.2.0",
   });
 
   server.tool(
@@ -136,6 +136,62 @@ export function createServer(): McpServer {
     { url: z.string().describe("The website URL whose robots.txt to parse") },
     async ({ url }) =>
       callApi(`https://robots-txt-parser.apimesh.xyz/analyze${qs({ url })}`),
+  );
+
+  server.tool(
+    "core_web_vitals",
+    "Get Core Web Vitals and Lighthouse performance scores for any URL. Returns LCP, CLS, INP field data plus performance, accessibility, best-practices, and SEO scores. Free preview: GET https://core-web-vitals.apimesh.xyz/preview?url=... returns performance score only",
+    { url: z.string().describe("The URL to analyze") },
+    async ({ url }) =>
+      callApi(`https://core-web-vitals.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "security_headers",
+    "Audit HTTP security headers for any URL. Checks 10 headers (CSP, HSTS, X-Frame-Options, etc.) with weighted grading A+ through F and remediation suggestions. Free preview: GET https://security-headers.apimesh.xyz/preview?url=... checks 3 key headers for free",
+    { url: z.string().describe("The URL to audit") },
+    async ({ url }) =>
+      callApi(`https://security-headers.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "redirect_chain",
+    "Trace the full redirect chain for any URL. Returns each hop with status code, location, and latency. Detects loops and extracts the final canonical URL. Free preview: GET https://redirect-chain.apimesh.xyz/preview?url=... traces up to 5 hops for free",
+    { url: z.string().describe("The URL to trace") },
+    async ({ url }) =>
+      callApi(`https://redirect-chain.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "email_security",
+    "Check email security configuration for any domain. Analyzes SPF, DMARC, DKIM (probes 10 common selectors), and MX records with provider detection. Free preview: GET https://email-security.apimesh.xyz/preview?domain=... checks SPF and DMARC for free",
+    { domain: z.string().describe("The domain to check (e.g. example.com)") },
+    async ({ domain }) =>
+      callApi(`https://email-security.apimesh.xyz/check${qs({ domain })}`),
+  );
+
+  server.tool(
+    "seo_audit",
+    "Run a comprehensive on-page SEO audit on any URL. Analyzes title, meta description, headings, images, links, content, canonical, OG tags, JSON-LD, and robots directives with a 0-100 score. Free preview: GET https://seo-audit.apimesh.xyz/preview?url=... returns title, meta, H1, and score for free",
+    { url: z.string().describe("The URL to audit") },
+    async ({ url }) =>
+      callApi(`https://seo-audit.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "indexability_checker",
+    "Check if a URL is indexable by search engines. Performs 5-layer analysis: robots.txt rules, HTTP status, meta robots, X-Robots-Tag, and canonical tag. Free preview: GET https://indexability.apimesh.xyz/preview?url=... checks HTTP status and meta robots for free",
+    { url: z.string().describe("The URL to check") },
+    async ({ url }) =>
+      callApi(`https://indexability.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "brand_assets",
+    "Extract brand assets from any domain. Returns logo URL, favicon, theme colors, OG image, and site name. Free preview: GET https://brand-assets.apimesh.xyz/preview?domain=... returns Google favicon URL for free",
+    { domain: z.string().describe("The domain to extract assets from (e.g. example.com)") },
+    async ({ domain }) =>
+      callApi(`https://brand-assets.apimesh.xyz/check${qs({ domain })}`),
   );
 
   return server;
