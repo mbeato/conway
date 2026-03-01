@@ -18,8 +18,26 @@ if (DASHBOARD_TOKEN.length < 32) {
   process.exit(1);
 }
 
-// Health check is public — before rate limiter for localhost monitoring
+// Public routes — before auth middleware
 app.get("/health", (c) => c.json({ status: "ok" }));
+
+// Serve discovery files at root (Caddy proxies apimesh.xyz to dashboard)
+app.get("/llms.txt", async (c) => {
+  const file = Bun.file("public/llms.txt");
+  if (await file.exists()) return c.text(await file.text());
+  return c.text("# apimesh.xyz\nNo llms.txt generated yet.\n", 404);
+});
+
+app.get("/.well-known/*", async (c) => {
+  const path = c.req.path; // e.g. /.well-known/x402.json
+  const file = Bun.file(`public${path}`);
+  if (await file.exists()) {
+    const ext = path.split(".").pop();
+    const ct = ext === "json" ? "application/json" : "text/plain";
+    return c.text(await file.text(), 200, { "Content-Type": ct });
+  }
+  return c.json({ error: "Not found" }, 404);
+});
 
 // CORS before rate limiter so 429 responses include CORS headers
 app.use("*", cors({
