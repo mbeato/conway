@@ -15,7 +15,12 @@ app.use("*", cors({
   allowHeaders: ["Content-Type", "X-PAYMENT", "payment-signature"],
 }));
 
-// Health/info endpoint — before rate limiter for localhost monitoring
+// Rate limit: 20/min for /check (each spawns 9 outbound calls), 60/min global
+app.use("/check", rateLimit("web-checker-check", 20, 60_000));
+app.use("*", rateLimit("web-checker", 60, 60_000));
+app.use("*", apiLogger(API_NAME, 0.005));
+
+// Info endpoint — after rate limiter so it's metered
 app.get("/", (c) => {
   return c.json({
     api: API_NAME,
@@ -24,11 +29,6 @@ app.get("/", (c) => {
     pricing: "$0.005 per check via x402",
   });
 });
-
-// Rate limit: 20/min for /check (each spawns 9 outbound calls), 60/min global
-app.use("/check", rateLimit("web-checker-check", 20, 60_000));
-app.use("*", rateLimit("web-checker", 60, 60_000));
-app.use("*", apiLogger(API_NAME, 0.005));
 
 app.use(
   paymentMiddleware(

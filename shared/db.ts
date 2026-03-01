@@ -8,6 +8,8 @@ const DB_PATH = join(dataDir, "agent.db");
 const db = new Database(DB_PATH, { create: true });
 db.exec("PRAGMA journal_mode=WAL;");
 db.exec("PRAGMA busy_timeout=5000;");
+db.exec("PRAGMA foreign_keys=ON;");
+db.exec("PRAGMA secure_delete=ON;");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS api_registry (

@@ -13,19 +13,23 @@ if (!DASHBOARD_TOKEN) {
   console.error("FATAL: DASHBOARD_TOKEN env var not set");
   process.exit(1);
 }
+if (DASHBOARD_TOKEN.length < 32) {
+  console.error("FATAL: DASHBOARD_TOKEN must be at least 32 characters (use: openssl rand -hex 24)");
+  process.exit(1);
+}
 
 // Health check is public — before rate limiter for localhost monitoring
 app.get("/health", (c) => c.json({ status: "ok" }));
 
-// Rate limit all other requests — 30/min per IP (brute force protection)
-app.use("*", rateLimit("dashboard", 30, 60_000));
-
-// Everything else requires bearer token — restrict CORS to specific origins
+// CORS before rate limiter so 429 responses include CORS headers
 app.use("*", cors({
   origin: process.env.CORS_ORIGIN || "https://apimesh.xyz",
   allowMethods: ["GET"],
   allowHeaders: ["Authorization", "Content-Type"],
 }));
+
+// Rate limit all other requests — 30/min per IP (brute force protection)
+app.use("*", rateLimit("dashboard", 30, 60_000));
 app.use("*", bearerAuth({ token: DASHBOARD_TOKEN }));
 
 app.get("/", (c) => {

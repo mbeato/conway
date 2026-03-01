@@ -44,6 +44,8 @@ async function checkHttp(
   }
 }
 
+const MAX_JSON_BODY = 64 * 1024; // 64KB guard for external JSON responses
+
 async function checkReddit(slug: string): Promise<AvailabilityResult> {
   const url = `https://www.reddit.com/r/${slug}/about.json`;
   try {
@@ -55,7 +57,11 @@ async function checkReddit(slug: string): Promise<AvailabilityResult> {
     if (res.status === 404) {
       return { platform: "reddit", identifier: slug, available: true, url };
     }
-    const data = (await res.json()) as any;
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > MAX_JSON_BODY) {
+      return { platform: "reddit", identifier: slug, available: null, url, error: "response_too_large" };
+    }
+    const data = JSON.parse(new TextDecoder().decode(buf)) as any;
     // Banned/private subs are NOT available for use
     const isTaken = data.reason === "banned" || data.reason === "private";
     const available = (data.error === 404 || (!data.data && !isTaken)) && !isTaken;
@@ -69,11 +75,15 @@ async function checkDns(domain: string): Promise<AvailabilityResult> {
   const dnsUrl = `https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`;
   try {
     const res = await fetch(dnsUrl, { signal: AbortSignal.timeout(5000) });
-    const data = (await res.json()) as any;
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > MAX_JSON_BODY) {
+      return { platform: "domain", identifier: domain, available: null, url: `https://${domain}`, error: "response_too_large" };
+    }
+    const data = JSON.parse(new TextDecoder().decode(buf)) as any;
     const available = !data.Answer || data.Answer.length === 0;
-    return { platform: "domain", identifier: domain, available, url: dnsUrl };
+    return { platform: "domain", identifier: domain, available, url: `https://${domain}` };
   } catch (e: unknown) {
-    return { platform: "domain", identifier: domain, available: null, url: dnsUrl, error: sanitizeNetworkError(e) };
+    return { platform: "domain", identifier: domain, available: null, url: `https://${domain}`, error: sanitizeNetworkError(e) };
   }
 }
 

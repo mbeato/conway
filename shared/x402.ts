@@ -15,6 +15,18 @@ export const WALLET_ADDRESS = WALLET_ADDRESS_RAW;
 
 const CDP_KEY_ID = process.env.CDP_API_KEY_ID;
 const CDP_KEY_SECRET = process.env.CDP_API_KEY_SECRET;
+
+// Partial CDP key config is almost certainly a mistake — fail loudly
+if (!!CDP_KEY_ID !== !!CDP_KEY_SECRET) {
+  console.error(
+    `FATAL: Partial CDP key configuration. ` +
+    `CDP_API_KEY_ID is ${CDP_KEY_ID ? "set" : "MISSING"}, ` +
+    `CDP_API_KEY_SECRET is ${CDP_KEY_SECRET ? "set" : "MISSING"}. ` +
+    `Both must be set for mainnet, or both omitted for testnet.`
+  );
+  process.exit(1);
+}
+
 const USE_MAINNET = !!CDP_KEY_ID && !!CDP_KEY_SECRET;
 
 export const NETWORK = USE_MAINNET ? "eip155:8453" : "eip155:84532";
