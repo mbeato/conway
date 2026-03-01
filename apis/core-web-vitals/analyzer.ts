@@ -2,11 +2,18 @@
 
 const PSI_BASE = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 
-function sanitizePsiUrl(raw: unknown): string {
+function sanitizePsiUrl(raw: unknown, inputUrl?: string): string {
   if (typeof raw !== "string") return "";
   try {
     const u = new URL(raw);
     if (u.protocol !== "http:" && u.protocol !== "https:") return "";
+    // Validate same-origin: fetchedUrl must match the input domain
+    if (inputUrl) {
+      try {
+        const input = new URL(inputUrl);
+        if (u.hostname !== input.hostname) return "";
+      } catch { return ""; }
+    }
     return u.toString().slice(0, 2048);
   } catch { return ""; }
 }
@@ -195,7 +202,7 @@ export async function analyzeFullReport(url: string): Promise<FullReport> {
 
   return {
     url,
-    fetchedUrl: sanitizePsiUrl(data.lighthouseResult?.finalDisplayedUrl ?? data.id ?? url),
+    fetchedUrl: sanitizePsiUrl(data.lighthouseResult?.finalDisplayedUrl ?? data.id ?? url, url),
     strategy: "mobile",
     coreWebVitals: {
       lcp,

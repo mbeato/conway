@@ -171,7 +171,7 @@ export async function traceRedirectChain(
     // SSRF check for each hop
     const check = validateExternalUrl(currentUrl);
     if ("error" in check) {
-      console.error(`[redirect-chain] Blocked URL at hop ${chain.length + 1}: ${check.error}`);
+      console.error(`[redirect-chain] Blocked URL at hop ${chain.length + 1}`);
       throw new Error(`Redirect chain contains a disallowed URL at hop ${chain.length + 1}`);
     }
 
@@ -212,9 +212,10 @@ export async function traceRedirectChain(
         latencyMs,
         headers: {},
       });
-      const errorMsg = err?.name === "TimeoutError" ? "Request timed out" : (err?.message || "Network error");
-      console.error(`[redirect-chain] Failed to fetch at hop ${chain.length}: ${errorMsg}`);
-      throw new Error(`Failed to reach destination at hop ${chain.length}: ${errorMsg}`);
+      const errorCategory = err?.name === "TimeoutError" ? "timeout" : "network_error";
+      console.error(`[redirect-chain] Failed to fetch at hop ${chain.length}: ${errorCategory}`);
+      const clientMsg = errorCategory === "timeout" ? "Request timed out" : "Network error";
+      throw new Error(`Failed to reach destination at hop ${chain.length}: ${clientMsg}`);
     }
     const latencyMs = Math.round(performance.now() - start);
 
