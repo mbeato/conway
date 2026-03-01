@@ -76,8 +76,8 @@ export async function prune(): Promise<string[]> {
     console.log(`[prune] Pruned ${pruned.length} APIs: ${pruned.join(", ")}`);
     // Restart router to pick up registry changes
     try {
-      Bun.spawnSync(["sudo", "systemctl", "restart", "api-router"]);
-      console.log("[prune] Router restarted");
+      Bun.spawnSync(["sudo", "/usr/local/bin/conway-deploy-restart"]);
+      console.log("[prune] Services restarted via deploy wrapper");
     } catch {
       console.log("[prune] Router restart skipped (not on server or no sudo)");
     }

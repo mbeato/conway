@@ -4,6 +4,7 @@ import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../..
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { parseRobotsTxt, analyzeRobotsTxt } from "./parser";
+import { validateExternalUrl, safeFetch } from "../../shared/ssrf";
 
 const app = new Hono();
 const API_NAME = "robots-txt-parser";
@@ -62,21 +63,24 @@ app.get("/analyze", async (c) => {
     return c.json({ error: "Query parameter ?url=https://example.com is required" }, 400);
   }
 
-  let robotsUrl: URL;
-  try {
-    // Ensure protocol present, sanitize
-    robotsUrl = new URL(urlParam);
-    robotsUrl.pathname = "/robots.txt";
-    robotsUrl.search = "";
-    robotsUrl.hash = "";
-  } catch {
-    return c.json({ error: "Invalid URL. Provide absolute URL including protocol (http/https)" }, 400);
+  // Validate URL (protocol + SSRF protection)
+  const check = validateExternalUrl(urlParam);
+  if ("error" in check) {
+    return c.json({ error: check.error }, 400);
   }
 
-  // Fetch robots.txt (timeout, 8s max)
+  const robotsUrl = check.url;
+  robotsUrl.pathname = "/robots.txt";
+  robotsUrl.search = "";
+  robotsUrl.hash = "";
+
+  // Fetch robots.txt with SSRF-safe redirect handling
   let res: Response;
   try {
-    res = await fetch(robotsUrl.toString(), { redirect: "follow", signal: AbortSignal.timeout(8000), headers: { "User-Agent": "robots-txt-parser/1.0 apimesh.xyz" } });
+    res = await safeFetch(robotsUrl.toString(), {
+      timeoutMs: 8000,
+      headers: { "User-Agent": "robots-txt-parser/1.0 apimesh.xyz" },
+    });
   } catch (e: any) {
     return c.json({ error: `Failed to fetch robots.txt: ${e?.name === 'TimeoutError' ? 'timeout' : (e?.message || 'network error')}` }, 500);
   }

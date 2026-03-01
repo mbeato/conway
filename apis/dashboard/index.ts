@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { bearerAuth } from "hono/bearer-auth";
+import { resolve, join } from "path";
 import db, { getRevenueByApi, getTotalRevenue } from "../../shared/db";
 import { WALLET_ADDRESS } from "../../shared/x402";
 import { rateLimit } from "../../shared/rate-limit";
@@ -18,21 +19,32 @@ if (DASHBOARD_TOKEN.length < 32) {
   process.exit(1);
 }
 
-// Public routes — before auth middleware
+// Rate limit for public routes (higher limit, still bounded)
+const publicLimit = rateLimit("dashboard-public", 120, 60_000);
+
+// Health check — no rate limit, must work from localhost monitoring
 app.get("/health", (c) => c.json({ status: "ok" }));
 
 // Serve discovery files at root (Caddy proxies apimesh.xyz to dashboard)
-app.get("/llms.txt", async (c) => {
+app.get("/llms.txt", publicLimit, async (c) => {
   const file = Bun.file("public/llms.txt");
   if (await file.exists()) return c.text(await file.text());
   return c.text("# apimesh.xyz\nNo llms.txt generated yet.\n", 404);
 });
 
-app.get("/.well-known/*", async (c) => {
-  const path = c.req.path; // e.g. /.well-known/x402.json
-  const file = Bun.file(`public${path}`);
+app.get("/.well-known/*", publicLimit, async (c) => {
+  // Path traversal protection: resolve and validate containment
+  const baseDir = resolve("public/.well-known");
+  const decoded = decodeURIComponent(c.req.path);
+  const filePath = resolve(join("public", decoded));
+
+  if (!filePath.startsWith(baseDir + "/") && filePath !== baseDir) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  const file = Bun.file(filePath);
   if (await file.exists()) {
-    const ext = path.split(".").pop();
+    const ext = filePath.split(".").pop();
     const ct = ext === "json" ? "application/json" : "text/plain";
     return c.text(await file.text(), 200, { "Content-Type": ct });
   }

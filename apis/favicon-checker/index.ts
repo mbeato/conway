@@ -4,6 +4,7 @@ import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../..
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkFavicon } from "./checker";
+import { validateExternalUrl } from "../../shared/ssrf";
 
 const app = new Hono();
 const API_NAME = "favicon-checker";
@@ -57,31 +58,18 @@ app.use(
 );
 
 app.get("/check", async (c) => {
-  let url = c.req.query("url");
-  if (!url) {
+  const rawUrl = c.req.query("url");
+  if (!rawUrl) {
     return c.json({ error: "Missing ?url= (http(s)://...)" }, 400);
   }
-  // Basic normalize
-  url = url.trim();
-  // Accept http/https only, strip fragment/query
-  let parsed: URL | null = null;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return c.json({ error: "Invalid URL" }, 400);
+
+  const check = validateExternalUrl(rawUrl.trim());
+  if ("error" in check) {
+    return c.json({ error: check.error }, 400);
   }
-  if (!/^https?:$/.test(parsed.protocol)) {
-    return c.json({ error: "Only http(s):// URLs are allowed." }, 400);
-  }
-  // Remove fragment/query
+  const parsed = check.url;
   parsed.hash = "";
   parsed.search = "";
-
-  // Don't allow localhost or private IPs (abuse guard)
-  const hostname = parsed.hostname;
-  if (/^(localhost|127\.|0\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/i.test(hostname)) {
-    return c.json({ error: "Private or local addresses not allowed." }, 400);
-  }
 
   try {
     const result = await checkFavicon(parsed.origin);

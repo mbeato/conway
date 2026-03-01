@@ -174,11 +174,14 @@ app.post("/test", async (c) => {
     if (typeof pattern !== "string" || pattern.length === 0) {
       return c.json({ error: "pattern is required as string" }, 400);
     }
+    if (pattern.length > 500) {
+      return c.json({ error: "Pattern too long (max 500 characters)" }, 400);
+    }
     if (!isValidFlags(flags)) {
       return c.json({ error: `Invalid regex flags: "${flags}"` }, 400);
     }
-    if (!Array.isArray(testStrings) || !testStrings.every(s => typeof s === "string" && s.length <= 5000)) {
-      return c.json({ error: "testStrings must be string array, each string up to 5000 chars" }, 400);
+    if (!Array.isArray(testStrings) || !testStrings.every(s => typeof s === "string" && s.length <= 1000)) {
+      return c.json({ error: "testStrings must be string array, each string up to 1000 chars" }, 400);
     }
     let re: RegExp;
     try {
@@ -192,8 +195,14 @@ app.post("/test", async (c) => {
       return c.json({ error: `Too many testStrings (max ${maxTests})` }, 400);
     }
     const results = testStrings.map(input => {
+      const start = performance.now();
       try {
         const matches = input.match(re);
+        const elapsed = performance.now() - start;
+        // Kill result if regex took too long (catastrophic backtracking)
+        if (elapsed > 100) {
+          return { input, matches: null, error: "Regex execution timed out (potential catastrophic backtracking)" };
+        }
         return {
           input,
           matches: matches ? Array.from(matches) : null

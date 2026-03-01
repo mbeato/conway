@@ -4,6 +4,7 @@ import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../..
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkServicesHealth } from "./service-checker";
+import { validateExternalUrl } from "../../shared/ssrf";
 
 const app = new Hono();
 const API_NAME = "microservice-health-check";
@@ -70,21 +71,17 @@ app.post("/check", async c => {
     return c.json({ error: "Maximum 10 services per request" }, 400);
   }
 
-  // Basic URL format check
-  const sanitized = services.map((url: string) => {
-    if (typeof url !== "string" || !/^https?:\/\//i.test(url)) return null;
-    // Disallow localhost, 127.0.0.1, ::1
-    try {
-      const parsed = new URL(url);
-      if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) return null;
-      return url;
-    } catch {
-      return null;
+  // Validate each URL (protocol + comprehensive SSRF protection)
+  for (const url of services) {
+    if (typeof url !== "string") {
+      return c.json({ error: "All entries in `services` must be strings" }, 400);
     }
-  });
-  if (sanitized.includes(null)) {
-    return c.json({ error: "All entries in `services` must be valid, non-local HTTP/HTTPS URLs" }, 400);
+    const check = validateExternalUrl(url);
+    if ("error" in check) {
+      return c.json({ error: `Invalid service URL "${url}": ${check.error}` }, 400);
+    }
   }
+  const sanitized = services;
 
   try {
     const report = await checkServicesHealth(sanitized as string[]);

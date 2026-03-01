@@ -110,10 +110,27 @@ JSON array only, no markdown fences:`;
       return [];
     }
 
-    // Write to backlog, skip duplicates
+    // Write to backlog, skip duplicates — validate names strictly
+    const NAME_PATTERN = /^[a-z][a-z0-9-]{1,48}[a-z0-9]$/;
+    const RESERVED = new Set([
+      "shared", "scripts", "public", "data", "node_modules",
+      "mcp-server", "dashboard", "router", "registry",
+    ]);
+
     let added = 0;
     for (const opp of opportunities) {
       if (!opp.name || !opp.description) continue;
+
+      // Strict allowlist: lowercase kebab-case, 3-50 chars
+      if (!NAME_PATTERN.test(opp.name)) {
+        console.warn(`[scout] Rejecting invalid name format: "${opp.name}"`);
+        continue;
+      }
+      if (RESERVED.has(opp.name)) {
+        console.warn(`[scout] Rejecting reserved name: "${opp.name}"`);
+        continue;
+      }
+
       if (backlogItemExists(opp.name)) {
         console.log(`[scout] Skipping duplicate: ${opp.name}`);
         continue;

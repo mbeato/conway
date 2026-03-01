@@ -4,6 +4,7 @@ import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../..
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkStatusCode } from "./status-checker";
+import { validateExternalUrl } from "../../shared/ssrf";
 
 const app = new Hono();
 const API_NAME = "status-code-checker";
@@ -65,27 +66,11 @@ app.get("/check", async (c) => {
     return c.json({ error: "Provide ?url= parameter (2-512 chars)" }, 400);
   }
 
-  // Validate URL: must be http(s), sensible domain
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(url);
-    if (!/^https?:$/.test(parsedUrl.protocol)) {
-      return c.json({ error: "Only http and https URLs are supported." }, 400);
-    }
-    // Disallow localhost and 0.0.0.0-like addresses
-    if (/(^localhost(\.|:|$))|^(127|0)\./.test(parsedUrl.hostname)) {
-      return c.json({ error: "Local/internal addresses are not allowed." }, 400);
-    }
-    // Optionally block private subnet ranges (RFC1918)
-    const privRanges = [
-      /^10\./, /^192\.168\./, /^172\.(1[6-9]|2[0-9]|3[0-1])\./
-    ];
-    if (privRanges.some(r => r.test(parsedUrl.hostname))) {
-      return c.json({ error: "Private network URLs are not allowed." }, 400);
-    }
-  } catch (e) {
-    return c.json({ error: "Invalid URL: must include protocol (https://host)" }, 400);
+  const check = validateExternalUrl(url);
+  if ("error" in check) {
+    return c.json({ error: check.error }, 400);
   }
+  const parsedUrl = check.url;
 
   const result = await checkStatusCode(parsedUrl.toString());
   return c.json(result);

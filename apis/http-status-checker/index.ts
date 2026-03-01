@@ -4,6 +4,7 @@ import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../..
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkHttpStatus } from "./http-check";
+import { validateExternalUrl } from "../../shared/ssrf";
 
 const app = new Hono();
 const API_NAME = "http-status-checker";
@@ -66,21 +67,12 @@ app.get("/check", async (c) => {
   if (!url) {
     return c.json({ error: "Missing required ?url parameter" }, 400);
   }
-  // Validate the URL
-  let parsedUrl: URL;
-  try {
-    parsedUrl = new URL(url);
-    // Only allow http(s)
-    if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
-      return c.json({ error: "Only http(s) protocols are supported" }, 400);
-    }
-    // Could also check for IPs here (block 127.0.0.1, private ranges, etc.)
-    if (/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(parsedUrl.hostname)) {
-      return c.json({ error: "Local and private addresses are not allowed" }, 400);
-    }
-  } catch (e) {
-    return c.json({ error: "Invalid URL" }, 400);
+
+  const check = validateExternalUrl(url);
+  if ("error" in check) {
+    return c.json({ error: check.error }, 400);
   }
+  const parsedUrl = check.url;
 
   // Parse expected code, or default to 200
   let expectedCode = 200;

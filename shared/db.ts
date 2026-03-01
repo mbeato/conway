@@ -83,6 +83,10 @@ export function logRevenue(apiName: string, amountUsd: number, txHash: string, n
   );
 }
 
+function safeDays(days: number): number {
+  return Math.max(1, Math.min(365, Math.floor(days)));
+}
+
 export function getRevenueByApi(days: number = 7) {
   return db.query(`
     SELECT api_name, SUM(amount_usd) as total_usd, COUNT(*) as tx_count
@@ -90,7 +94,7 @@ export function getRevenueByApi(days: number = 7) {
     WHERE created_at > datetime('now', '-' || ? || ' days')
     GROUP BY api_name
     ORDER BY total_usd DESC
-  `).all(days);
+  `).all(safeDays(days));
 }
 
 export function getTotalRevenue(days: number = 7) {
@@ -98,7 +102,7 @@ export function getTotalRevenue(days: number = 7) {
     SELECT COALESCE(SUM(amount_usd), 0) as total_usd, COUNT(*) as tx_count
     FROM revenue
     WHERE created_at > datetime('now', '-' || ? || ' days')
-  `).get(days) as { total_usd: number; tx_count: number };
+  `).get(safeDays(days)) as { total_usd: number; tx_count: number };
 }
 
 export function getRequestCount(apiName: string, days: number = 7) {
@@ -106,7 +110,7 @@ export function getRequestCount(apiName: string, days: number = 7) {
     SELECT COUNT(*) as count
     FROM requests
     WHERE api_name = ? AND created_at > datetime('now', '-' || ? || ' days')
-  `).get(apiName, days) as { count: number };
+  `).get(apiName, safeDays(days)) as { count: number };
 }
 
 export function registerApi(name: string, port: number, subdomain: string) {

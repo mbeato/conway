@@ -4,9 +4,14 @@ import {
   updateBacklogStatus,
   registerApi,
 } from "../../shared/db";
-import { join } from "path";
+import { join, resolve } from "path";
 
 const MAX_RETRIES = 3;
+const API_NAME_PATTERN = /^[a-z][a-z0-9-]{1,48}[a-z0-9]$/;
+const RESERVED_NAMES = new Set([
+  "shared", "scripts", "public", "data", "node_modules",
+  "mcp-server", "dashboard", "router", "registry",
+]);
 const PROJECT_DIR = join(import.meta.dir, "..", "..");
 const APIS_DIR = join(PROJECT_DIR, "apis");
 const REGISTRY_PATH = join(APIS_DIR, "registry.ts");
@@ -102,9 +107,34 @@ async function testLocally(
     await Bun.spawn(["rm", "-rf", testDir]).exited;
     await Bun.spawn(["mkdir", "-p", testDir]).exited;
 
-    // Write generated files
+    // Write generated files with path containment enforcement
+    const resolvedBase = resolve(testDir);
     for (const file of files) {
-      const filePath = join(testDir, file.path);
+      // Sanitize path: strip traversal components
+      const safePath = file.path
+        .replace(/\\/g, "/")
+        .split("/")
+        .filter((p) => p !== ".." && p !== "." && p.length > 0)
+        .join("/");
+
+      if (!safePath || safePath.length === 0) {
+        console.error(`[build] Rejecting invalid file path: "${file.path}"`);
+        return { success: false, error: `Invalid file path in GPT response: "${file.path}"` };
+      }
+
+      // Only allow .ts and .json files
+      if (!/\.(ts|json)$/.test(safePath)) {
+        console.error(`[build] Rejecting non-ts/json file: "${safePath}"`);
+        return { success: false, error: `Disallowed file extension: "${safePath}"` };
+      }
+
+      const filePath = join(testDir, safePath);
+      const resolvedPath = resolve(filePath);
+      if (!resolvedPath.startsWith(resolvedBase + "/")) {
+        console.error(`[build] Path traversal blocked: "${file.path}" -> "${resolvedPath}"`);
+        return { success: false, error: `Path traversal attempt: "${file.path}"` };
+      }
+
       const dir = filePath.substring(0, filePath.lastIndexOf("/"));
       await Bun.spawn(["mkdir", "-p", dir]).exited;
       await Bun.write(filePath, file.content);
@@ -241,6 +271,18 @@ export async function build(): Promise<boolean> {
     return false;
   }
 
+  // Validate API name before using it in paths or code
+  if (!API_NAME_PATTERN.test(item.name)) {
+    console.error(`[build] Invalid API name format: "${item.name}" — skipping`);
+    updateBacklogStatus(item.id, "failed");
+    return false;
+  }
+  if (RESERVED_NAMES.has(item.name)) {
+    console.error(`[build] Reserved name: "${item.name}" — skipping`);
+    updateBacklogStatus(item.id, "failed");
+    return false;
+  }
+
   console.log(`[build] Building: ${item.name} — ${item.description}`);
   updateBacklogStatus(item.id, "building");
 
@@ -295,8 +337,8 @@ export async function build(): Promise<boolean> {
 
     // Restart router
     try {
-      Bun.spawnSync(["sudo", "systemctl", "restart", "api-router"]);
-      console.log("[build] Router restarted");
+      Bun.spawnSync(["sudo", "/usr/local/bin/conway-deploy-restart"]);
+      console.log("[build] Services restarted via deploy wrapper");
     } catch {
       console.log("[build] Router restart skipped (not on server or no sudo)");
     }

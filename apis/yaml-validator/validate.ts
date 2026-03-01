@@ -28,6 +28,16 @@ export function validateYaml(yamlSource: string): Output {
     };
   }
 
+  // YAML billion laughs protection: limit anchor/alias expansion
+  const anchorCount = (yamlSource.match(/&[a-zA-Z0-9_-]+/g) || []).length;
+  const aliasCount = (yamlSource.match(/\*[a-zA-Z0-9_-]+/g) || []).length;
+  if (anchorCount > 10 || aliasCount > 50) {
+    return {
+      valid: false,
+      errors: [{ message: "Excessive YAML anchors/aliases detected (potential billion laughs attack)" }],
+    };
+  }
+
   try {
     // Bun's YAML.parse throws on error
     // It supports single doc (no YAML.loadAll). We'll expose only parse.
