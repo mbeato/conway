@@ -34,7 +34,7 @@ router.get("/health", (c) => {
   if (subdomain && registry[subdomain]) {
     return registry[subdomain].fetch(c.req.raw);
   }
-  return c.json({ status: "ok", router: true, apis: Object.keys(registry) });
+  return c.json({ status: "ok" });
 });
 
 // Serve .well-known/x402 per subdomain so x402 scanners can discover paid routes

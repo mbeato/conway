@@ -118,17 +118,25 @@ app.post("/build", async (c) => {
     }
 
     if (typeof body.pattern === "string") {
+      if (body.pattern.length > 500) {
+        return c.json({ error: "Pattern too long (max 500 characters)" }, 400);
+      }
       pattern = body.pattern;
       if (body.flags && typeof body.flags === "string") {
         flags = body.flags;
       }
     } else if (Array.isArray(body.components)) {
-      pattern = buildPatternFromComponents(body.components);
+      pattern = buildPatternFromComponents(body.components, 0);
       if (body.flags && typeof body.flags === "string") {
         flags = body.flags;
       }
     } else {
       return c.json({ error: "Invalid body: must provide { pattern } or { components }" }, 400);
+    }
+
+    // Validate generated pattern length
+    if (pattern.length > 500) {
+      return c.json({ error: "Generated pattern too long (max 500 characters)" }, 400);
     }
 
     // Validate flags
@@ -256,11 +264,15 @@ type RegexComponent =
   | { type: "anchor"; value: string }
   | { type: "raw"; value: string };
 
-// Simple recursive builder
-function buildPatternFromComponents(components: any[]): string {
-  return components.map(buildComponentPattern).join("");
+// Recursive builder with depth limit to prevent stack overflow
+const MAX_COMPONENT_DEPTH = 20;
+
+function buildPatternFromComponents(components: any[], depth: number = 0): string {
+  if (depth > MAX_COMPONENT_DEPTH) return "";
+  return components.map(c => buildComponentPattern(c, depth)).join("");
 }
-function buildComponentPattern(component: any): string {
+function buildComponentPattern(component: any, depth: number = 0): string {
+  if (depth > MAX_COMPONENT_DEPTH) return "";
   if (!component || typeof component !== "object" || typeof component.type !== "string") return "";
   switch (component.type) {
     case "literal":
@@ -273,15 +285,15 @@ function buildComponentPattern(component: any): string {
       return String(component.value ?? "");
     case "quantifier":
       const quant = String(component.quant ?? "");
-      return `(${buildComponentPattern(component.of)})${quant}`;
+      return `(${buildComponentPattern(component.of, depth + 1)})${quant}`;
     case "group":
       {
         const cap = component.capturing === false ? "?:" : "";
-        return `(${cap}${(Array.isArray(component.value) ? component.value.map(buildComponentPattern).join("") : "")})`;
+        return `(${cap}${(Array.isArray(component.value) ? component.value.map((c: any) => buildComponentPattern(c, depth + 1)).join("") : "")})`;
       }
     case "alternation":
       if (Array.isArray(component.options)) {
-        return `(${component.options.map(buildComponentPattern).join("|")})`;
+        return `(${component.options.map((c: any) => buildComponentPattern(c, depth + 1)).join("|")})`;
       }
       return "";
     default:

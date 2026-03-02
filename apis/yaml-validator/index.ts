@@ -74,7 +74,11 @@ app.use(
 app.post("/validate", async c => {
   let body: { yaml?: string };
   try {
-    body = await c.req.json<{ yaml?: string }>();
+    const buf = await c.req.raw.arrayBuffer();
+    if (buf.byteLength > 16 * 1024) {
+      return c.json({ error: "Request body too large (max 16KB)" }, 413);
+    }
+    body = JSON.parse(new TextDecoder().decode(buf));
   } catch (e) {
     return c.json({ error: "Invalid JSON body" }, 400);
   }
