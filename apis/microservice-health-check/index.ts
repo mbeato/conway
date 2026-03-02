@@ -81,9 +81,13 @@ app.use(
 );
 
 app.post("/check", async c => {
+  const buf = await c.req.raw.arrayBuffer();
+  if (buf.byteLength > 16 * 1024) {
+    return c.json({ error: "Request body too large (max 16KB)" }, 413);
+  }
   let body: any;
   try {
-    body = await c.req.json();
+    body = JSON.parse(new TextDecoder().decode(buf));
   } catch (e) {
     return c.json({ error: "Invalid JSON body" }, 400);
   }

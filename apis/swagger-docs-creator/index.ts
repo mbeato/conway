@@ -78,7 +78,11 @@ app.use(
 
 app.post("/generate", async (c) => {
   try {
-    const body = await c.req.json();
+    const buf = await c.req.raw.arrayBuffer();
+    if (buf.byteLength > 16 * 1024) {
+      return c.json({ error: "Request body too large (max 16KB)" }, 413);
+    }
+    const body = JSON.parse(new TextDecoder().decode(buf));
     const swagger = generateSwagger(body);
     return c.json(swagger);
   } catch (e: any) {

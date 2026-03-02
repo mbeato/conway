@@ -73,8 +73,8 @@ function extractSubdomain(host: string): string | null {
   // Match *.apimesh.xyz
   const match = hostname.match(/^([^.]+)\.apimesh\.xyz$/);
   if (match) return match[1];
-  // Local testing only: allow <name>.localhost
-  if (hostname.endsWith(".localhost")) return hostname.split(".")[0];
+  // Local testing only: allow <name>.localhost (disabled in production)
+  if (process.env.NODE_ENV !== "production" && hostname.endsWith(".localhost")) return hostname.split(".")[0];
   return null;
 }
 

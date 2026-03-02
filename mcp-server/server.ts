@@ -87,7 +87,7 @@ function qs(params: Record<string, string | number | undefined>): string {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "apimesh",
-    version: "1.2.0",
+    version: "1.2.2",
   });
 
   server.tool(

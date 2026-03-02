@@ -162,11 +162,18 @@ async function testLocally(
 
     // Step 3: Start on a test port and health check
     console.log(`[build] Starting test server on port ${TEST_PORT}...`);
+    // Strip sensitive env vars from LLM-generated code execution
+    const safeEnv = { ...process.env, PORT: String(TEST_PORT) };
+    delete safeEnv.DASHBOARD_TOKEN;
+    delete safeEnv.CDP_API_KEY_ID;
+    delete safeEnv.CDP_API_KEY_SECRET;
+    delete safeEnv.CONWAY_API_KEY;
+
     const testProc = Bun.spawn(
       [BUN, "run", join(tempApiDir, "index.ts")],
       {
         cwd: PROJECT_DIR,
-        env: { ...process.env, PORT: String(TEST_PORT) },
+        env: safeEnv,
         stdout: "pipe",
         stderr: "pipe",
       }

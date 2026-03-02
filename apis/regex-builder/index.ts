@@ -105,7 +105,11 @@ app.use(
  */
 app.post("/build", async (c) => {
   try {
-    const body = await c.req.json();
+    const buf = await c.req.raw.arrayBuffer();
+    if (buf.byteLength > 16 * 1024) {
+      return c.json({ error: "Request body too large (max 16KB)" }, 413);
+    }
+    const body = JSON.parse(new TextDecoder().decode(buf));
     let pattern = "";
     let flags = "";
 
@@ -164,7 +168,11 @@ app.post("/build", async (c) => {
  */
 app.post("/test", async (c) => {
   try {
-    const body = await c.req.json();
+    const buf = await c.req.raw.arrayBuffer();
+    if (buf.byteLength > 16 * 1024) {
+      return c.json({ error: "Request body too large (max 16KB)" }, 413);
+    }
+    const body = JSON.parse(new TextDecoder().decode(buf));
     if (!body || typeof body !== "object") {
       return c.json({ error: "Invalid JSON body" }, 400);
     }
