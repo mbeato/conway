@@ -336,6 +336,134 @@
         padding: 32px;
       }
 
+      /* --- Tabs --- */
+      .tabs {
+        display: flex;
+        gap: 0;
+        border-bottom: 1px solid #1a1a1a;
+        margin-bottom: 32px;
+      }
+      .tab {
+        padding: 10px 20px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #555;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: color 0.15s, border-color 0.15s;
+        user-select: none;
+      }
+      .tab:hover { color: #999; }
+      .tab.active { color: #ededed; border-bottom-color: #ededed; }
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+
+      /* --- Filters --- */
+      .filters {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .filter-input, .filter-select {
+        padding: 8px 12px;
+        background: #0a0a0a;
+        border: 1px solid #333;
+        border-radius: 6px;
+        color: #ededed;
+        font-family: inherit;
+        font-size: 13px;
+        outline: none;
+      }
+      .filter-input:focus, .filter-select:focus { border-color: #ededed; }
+      .filter-input::placeholder { color: #555; }
+      .filter-select { cursor: pointer; }
+      .filter-select option { background: #0a0a0a; }
+
+      .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-top: 1px solid #1a1a1a;
+        font-size: 12px;
+        color: #555;
+      }
+      .pagination button {
+        padding: 6px 12px;
+        background: transparent;
+        border: 1px solid #333;
+        border-radius: 4px;
+        color: #999;
+        font-family: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .pagination button:hover { color: #ededed; border-color: #555; }
+      .pagination button:disabled { opacity: 0.3; cursor: default; }
+
+      /* --- Spend Cap Form --- */
+      .cap-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr 1fr auto;
+        gap: 12px;
+        margin-bottom: 24px;
+        align-items: end;
+      }
+      .cap-form label {
+        font-size: 12px;
+        color: #666;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .cap-form input {
+        padding: 8px 12px;
+        background: #0a0a0a;
+        border: 1px solid #333;
+        border-radius: 6px;
+        color: #ededed;
+        font-family: inherit;
+        font-size: 13px;
+        outline: none;
+      }
+      .cap-form input:focus { border-color: #ededed; }
+      .cap-form input::placeholder { color: #555; }
+      .btn-sm {
+        padding: 8px 16px;
+        background: #ededed;
+        color: #0a0a0a;
+        border: none;
+        border-radius: 6px;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .btn-sm:hover { background: #fff; }
+      .btn-danger {
+        background: transparent;
+        color: #e5484d;
+        border: 1px solid #333;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .btn-danger:hover { border-color: #e5484d; }
+      .cap-msg {
+        font-size: 12px;
+        min-height: 18px;
+        margin-bottom: 8px;
+      }
+      .cap-msg.ok { color: #3ddc84; }
+      .cap-msg.err { color: #e5484d; }
+
+      @media (max-width: 900px) {
+        .cap-form { grid-template-columns: 1fr 1fr; }
+      }
+
       /* --- Responsive --- */
       @media (max-width: 900px) {
         .cards { grid-template-columns: repeat(2, 1fr); }
@@ -377,6 +505,13 @@
         </div>
       </div>
 
+      <div class="tabs">
+        <div class="tab active" data-tab="overview">Overview</div>
+        <div class="tab" data-tab="audit">Audit Log</div>
+        <div class="tab" data-tab="caps">Spend Caps</div>
+      </div>
+
+      <div id="tab-overview" class="tab-content active">
       <div class="cards">
         <div class="card">
           <div class="card-label">Revenue (7d)</div>
@@ -461,191 +596,99 @@
           </tbody>
         </table>
       </div>
+      </div><!-- /tab-overview -->
+
+      <div id="tab-audit" class="tab-content">
+        <div class="filters">
+          <input class="filter-input" id="audit-wallet" placeholder="Filter by wallet (0x...)" style="width:320px" />
+          <select class="filter-select" id="audit-api"><option value="">All APIs</option></select>
+          <button class="btn-sm" id="audit-search">Search</button>
+        </div>
+        <div class="panel">
+          <div class="panel-header">Audit Log</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Wallet</th>
+                <th>API</th>
+                <th>Endpoint</th>
+                <th>Status</th>
+                <th>Amount</th>
+                <th>Tx</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table">
+              <tr><td colspan="7" class="empty-state">Click Search to load</td></tr>
+            </tbody>
+          </table>
+          <div class="pagination" id="audit-pagination" style="display:none">
+            <span id="audit-info"></span>
+            <div style="display:flex;gap:8px">
+              <button id="audit-prev" disabled>Prev</button>
+              <button id="audit-next" disabled>Next</button>
+            </div>
+          </div>
+        </div>
+      </div><!-- /tab-audit -->
+
+      <div id="tab-caps" class="tab-content">
+        <div class="panel" style="margin-bottom:24px">
+          <div class="panel-header">Add / Edit Spend Cap</div>
+          <div style="padding:16px">
+            <div class="cap-msg" id="cap-msg"></div>
+            <div class="cap-form">
+              <label>Wallet<input id="cap-wallet" placeholder="0x..." /></label>
+              <label>Label<input id="cap-label" placeholder="Claude Desktop" /></label>
+              <label>Daily limit (USD)<input id="cap-daily" type="number" step="0.01" placeholder="unlimited" /></label>
+              <label>Monthly limit (USD)<input id="cap-monthly" type="number" step="0.01" placeholder="unlimited" /></label>
+              <button class="btn-sm" id="cap-save" style="align-self:end">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">Active Spend Caps</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Wallet</th>
+                <th>Label</th>
+                <th>Daily Limit</th>
+                <th>Monthly Limit</th>
+                <th>Updated</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="caps-table">
+              <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="panel" style="margin-top:24px">
+          <div class="panel-header">Known Wallets</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Wallet</th>
+                <th>Spend (7d)</th>
+                <th>Spend (30d)</th>
+                <th>Total Spent</th>
+                <th>Requests</th>
+                <th>Last Seen</th>
+                <th>Cap</th>
+              </tr>
+            </thead>
+            <tbody id="wallets-table">
+              <tr><td colspan="7" class="empty-state">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div><!-- /tab-caps -->
+
     </div>
 
-    <script>
-      var B = location.origin, ri = null;
-
-      function gt() { return sessionStorage.getItem("t"); }
-      function st(t) { sessionStorage.setItem("t", t); }
-      function ct() { sessionStorage.removeItem("t"); }
-
-      async function login() {
-        var inp = document.getElementById("token-input");
-        var err = document.getElementById("login-error");
-        var tok = inp.value.trim();
-        if (!tok) { err.textContent = "Token required"; return; }
-        try {
-          var res = await fetch(B + "/api/stats", { headers: { Authorization: "Bearer " + tok } });
-          if (res.status === 401) { err.textContent = "Invalid token"; return; }
-          if (!res.ok) { err.textContent = "Error " + res.status; return; }
-          st(tok); inp.value = ""; err.textContent = "";
-          show(); render(await res.json());
-        } catch(e) { err.textContent = "Network error"; }
-      }
-
-      document.getElementById("token-input").addEventListener("keydown", function(e) { if (e.key === "Enter") login(); });
-      document.getElementById("login-btn").addEventListener("click", login);
-      document.getElementById("logout-btn").addEventListener("click", logout);
-
-      function logout() {
-        ct(); stopR();
-        document.getElementById("login").classList.remove("hidden");
-        document.getElementById("dashboard").classList.remove("active");
-      }
-
-      function show() {
-        document.getElementById("login").classList.add("hidden");
-        document.getElementById("dashboard").classList.add("active");
-        startR();
-      }
-
-      function startR() { stopR(); if (document.getElementById("auto-refresh").checked) ri = setInterval(load, 10000); }
-      function stopR() { if (ri) { clearInterval(ri); ri = null; } }
-      document.getElementById("auto-refresh").addEventListener("change", function() {
-        if (this.checked) startR(); else stopR();
-      });
-
-      async function load() {
-        var tok = gt(); if (!tok) return;
-        try {
-          var res = await fetch(B + "/api/stats", { headers: { Authorization: "Bearer " + tok } });
-          if (res.status === 401) { logout(); return; }
-          if (!res.ok) return;
-          render(await res.json());
-        } catch(e) {}
-      }
-
-      function fmt$(v) { return "$" + Number(v || 0).toFixed(4); }
-      function fmtN(v) { return Number(v || 0).toLocaleString(); }
-      function fmtPct(v) { return (Number(v || 0) * 100).toFixed(1) + "%"; }
-      function fmtTime(iso) {
-        if (!iso) return "--";
-        var s = iso.includes("T") ? iso : iso.replace(" ", "T") + "Z";
-        var d = new Date(s);
-        if (isNaN(d)) return "--";
-        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-      }
-      function esc(s) { var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
-
-      // --- SVG ---
-      function sparkline(el, data, color) {
-        if (!data || !data.length) { el.innerHTML = ""; return; }
-        var w = 80, h = 28, max = Math.max.apply(null, data.concat([0.001]));
-        var pts = data.map(function(v, i) {
-          return [(i / Math.max(data.length - 1, 1)) * w, h - (v / max) * (h - 2) - 1];
-        });
-        var d = pts.map(function(p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1); }).join("");
-        el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
-          '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-      }
-
-      function barChart(el, labels, vals) {
-        if (!vals || !vals.length) { el.innerHTML = '<div class="empty-state">No data</div>'; return; }
-        var w = 700, h = 120, max = Math.max.apply(null, vals.concat([1]));
-        var bw = Math.max(2, w / vals.length - 1.5);
-        var svg = '';
-
-        // Gridlines
-        for (var g = 0; g <= 3; g++) {
-          var gy = (h / 3) * g;
-          svg += '<line x1="0" y1="' + gy.toFixed(1) + '" x2="' + w + '" y2="' + gy.toFixed(1) + '" stroke="#1a1a1a" stroke-width="1"/>';
-        }
-
-        // Bars
-        for (var i = 0; i < vals.length; i++) {
-          var bh = (vals[i] / max) * (h - 4);
-          var x = (i / vals.length) * w;
-          var y = h - bh;
-          svg += '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="1" fill="#333"/>';
-        }
-
-        // X labels
-        var step = Math.max(1, Math.floor(vals.length / 6));
-        for (var j = 0; j < labels.length; j += step) {
-          var lx = (j / vals.length) * w + bw / 2;
-          svg += '<text x="' + lx.toFixed(1) + '" y="' + (h + 14) + '" fill="#444" font-size="10" font-family="Inter,sans-serif" text-anchor="middle">' + esc(labels[j]) + '</text>';
-        }
-
-        el.innerHTML = '<svg viewBox="0 0 ' + w + ' ' + (h + 18) + '" preserveAspectRatio="none">' + svg + '</svg>';
-      }
-
-      function breakdown(el, items) {
-        if (!items || !items.length) { el.innerHTML = '<div class="empty-state">No revenue data</div>'; return; }
-        var colors = ["#ededed", "#999", "#666", "#555", "#444", "#333"];
-        el.innerHTML = items.slice(0, 8).map(function(item, i) {
-          return '<div class="breakdown-item">' +
-            '<div class="breakdown-dot" style="background:' + colors[i % colors.length] + '"></div>' +
-            '<div class="breakdown-name">' + esc(item.api_name) + '</div>' +
-            '<div class="breakdown-val">' + fmt$(item.total_usd) + '</div></div>';
-        }).join("");
-      }
-
-      function render(data) {
-        var upd = function(id, v) { document.getElementById(id).textContent = v; };
-        upd("rev-7d", fmt$(data.revenue_7d));
-        upd("rev-30d", fmt$(data.revenue_30d));
-        upd("active-apis", data.apis ? data.apis.length : 0);
-        upd("total-requests", fmtN(data.total_requests_7d));
-
-        if (data.wallet) {
-          document.getElementById("wallet").textContent = data.wallet.substring(0, 6) + "..." + data.wallet.slice(-4);
-          document.getElementById("wallet").title = data.wallet;
-        }
-        document.getElementById("last-updated").textContent = new Date().toLocaleTimeString();
-
-        // Sparklines
-        if (data.charts) {
-          sparkline(document.getElementById("spark-rev"), (data.charts.daily_revenue_7d || []).map(function(d) { return d.total_usd; }), "#3ddc84");
-          sparkline(document.getElementById("spark-rev-30"), (data.charts.daily_revenue_30d || []).map(function(d) { return d.total_usd; }), "#3ddc84");
-          sparkline(document.getElementById("spark-req"), (data.charts.daily_requests_7d || []).map(function(d) { return d.total; }), "#ededed");
-
-          var hourly = data.charts.hourly_requests_24h || [];
-          barChart(
-            document.getElementById("chart-hourly"),
-            hourly.map(function(h) { var p = h.hour.split(" "); return p[1] || h.hour; }),
-            hourly.map(function(h) { return h.total; })
-          );
-        }
-
-        // Revenue breakdown
-        breakdown(document.getElementById("api-breakdown"), data.revenue_by_api);
-
-        // APIs table
-        var ab = document.getElementById("apis-table");
-        if (!data.apis || !data.apis.length) {
-          ab.innerHTML = '<tr><td colspan="4" class="empty-state">No APIs</td></tr>';
-        } else {
-          ab.innerHTML = data.apis.map(function(a) {
-            var errColor = a.error_rate_7d && a.error_rate_7d.rate > 0.05 ? ' class="mono red"' : ' class="mono dim"';
-            return '<tr>' +
-              '<td class="primary"><a href="https://' + esc(a.subdomain) + '.apimesh.xyz" target="_blank">' + esc(a.name) + '</a></td>' +
-              '<td class="mono">' + fmtN(a.requests_7d) + '</td>' +
-              '<td' + errColor + '>' + fmtPct(a.error_rate_7d ? a.error_rate_7d.rate : 0) + '</td>' +
-              '<td class="mono green">' + fmt$(a.revenue_7d) + '</td></tr>';
-          }).join("");
-        }
-
-        // Recent requests
-        var rb = document.getElementById("requests-table");
-        if (!data.recent_requests || !data.recent_requests.length) {
-          rb.innerHTML = '<tr><td colspan="6" class="empty-state">No events</td></tr>';
-        } else {
-          rb.innerHTML = data.recent_requests.slice(0, 15).map(function(r) {
-            var sc = r.status_code;
-            var scClass = sc >= 500 ? "mono red" : sc >= 400 ? "mono" : "mono green";
-            return '<tr>' +
-              '<td class="mono dim">' + fmtTime(r.created_at) + '</td>' +
-              '<td class="primary">' + esc(r.api_name) + '</td>' +
-              '<td class="mono dim">' + esc(r.method) + ' ' + esc(r.endpoint) + '</td>' +
-              '<td class="' + scClass + '">' + (Number.isFinite(sc) ? sc : "--") + '</td>' +
-              '<td class="mono dim">' + (Number.isFinite(r.response_time_ms) ? r.response_time_ms.toFixed(0) + "ms" : "--") + '</td>' +
-              '<td>' + (r.paid ? '<span class="badge badge-paid">paid</span>' : '<span class="badge badge-free">free</span>') + '</td></tr>';
-          }).join("");
-        }
-      }
-
-      if (gt()) { show(); load(); }
-    </script>
+    <script src="/dashboard.js"></script>
   </body>
 </html>

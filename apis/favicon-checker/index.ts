@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkFavicon } from "./checker";
 import { validateExternalUrl } from "../../shared/ssrf";
@@ -22,6 +24,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // /check: 10 req/min/IP (favicon pulls), with 60/min global after
 app.use("/check", rateLimit("favicon-checker-check", 10, 60_000));
 app.use("*", rateLimit("favicon-checker", 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.002));
 
 // Info endpoint — open price and docs
@@ -36,6 +39,7 @@ app.get("/", (c) => {
 });
 
 // Paid endpoint
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

@@ -6,6 +6,8 @@ import {
   resourceServer
 } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { validateYaml } from "./validate";
 
@@ -29,6 +31,7 @@ app.get("/health", c => c.json({ status: "ok" }));
 // Rate limit: 30/min for /validate (YAML checks are low cost, but protect backend)
 app.use("/validate", rateLimit("yaml-validator-validate", 30, 60_000));
 app.use("*", rateLimit("yaml-validator", 120, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.002));
 
 // Info endpoint
@@ -49,6 +52,7 @@ app.get("/", c => {
   });
 });
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

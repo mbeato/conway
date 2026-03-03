@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { validateExternalUrl } from "../../shared/ssrf";
 import { traceRedirectChain } from "./tracer";
@@ -29,6 +31,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Rate limiting
 app.use("/check", rateLimit("redirect-chain-check", 30, 60_000));
 app.use("*", rateLimit("redirect-chain", 90, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.001));
 
 // Info endpoint
@@ -73,6 +76,7 @@ app.get("/preview", rateLimit("redirect-chain-preview", 20, 60_000), async (c) =
   }
 });
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

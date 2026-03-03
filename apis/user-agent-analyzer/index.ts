@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { analyzeUserAgent, type UserAgentResult } from "./parser";
 
@@ -23,6 +25,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Rate limits (20/min endpoint, 60/min global).
 app.use("/analyze", rateLimit(API_NAME + "-analyze", 20, 60_000));
 app.use("*", rateLimit(API_NAME, 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, PRICE));
 
 // Info endpoint
@@ -37,6 +40,7 @@ app.get("/", (c) =>
   })
 );
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

@@ -21,7 +21,10 @@ export function apiLogger(apiName: string, priceUsd: number = 0): MiddlewareHand
     const clientIp = sanitizeLogField(c.req.header("x-real-ip") || "direct");
     const path = sanitizeLogField(c.req.path);
 
-    logRequest(apiName, path, c.req.method, c.res.status, ms, paid, amount, clientIp);
+    // Payer wallet set by extractPayerWallet() middleware
+    const payerWallet: string | undefined = c.get("payerWallet");
+
+    logRequest(apiName, path, c.req.method, c.res.status, ms, paid, amount, clientIp, payerWallet);
 
     if (paid && amount > 0) {
       // Attempt to extract txHash from settlement response
@@ -33,7 +36,7 @@ export function apiLogger(apiName: string, priceUsd: number = 0): MiddlewareHand
       } catch {
         // Settlement header may not be base64 JSON — log without txHash
       }
-      logRevenue(apiName, amount, txHash, NETWORK);
+      logRevenue(apiName, amount, txHash, NETWORK, payerWallet);
     }
   };
 }

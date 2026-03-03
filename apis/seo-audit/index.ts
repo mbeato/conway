@@ -3,6 +3,8 @@ import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { validateExternalUrl } from "../../shared/ssrf";
 import { auditFull, auditPreview } from "./auditor";
 
@@ -30,6 +32,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // 3. Rate limits then logger
 app.use("/check", rateLimit("seo-audit-check", 20, 60_000));
 app.use("*", rateLimit("seo-audit", 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.003));
 
 // 4. Info endpoint
@@ -67,6 +70,7 @@ app.get("/preview", rateLimit("seo-audit-preview", 15, 60_000), async (c) => {
 });
 
 // 6. Payment middleware
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

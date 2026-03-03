@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkServicesHealth } from "./service-checker";
 import { validateExternalUrl } from "../../shared/ssrf";
@@ -23,6 +25,7 @@ app.get("/health", c => c.json({ status: "ok" }));
 // /check: 30 per minute per key, global 100/min
 app.use("/check", rateLimit("microservice-health-check-check", 30, 60_000));
 app.use("*", rateLimit("microservice-health-check", 100, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.003));
 
 // Info endpoint (metered for analytics)
@@ -58,6 +61,7 @@ app.get("/preview", rateLimit("microservice-health-preview", 15, 60_000), async 
   }
 });
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

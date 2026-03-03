@@ -3,6 +3,8 @@ import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { validateDomain, previewExtract, fullExtract } from "./extractor";
 
 const app = new Hono();
@@ -25,6 +27,7 @@ app.use("/check", rateLimit("brand-assets-check", 30, 60_000));
 app.use("*", rateLimit("brand-assets", 90, 60_000));
 
 // 4. API logger
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.002));
 
 // 5. Info endpoint
@@ -57,6 +60,7 @@ app.get("/preview", rateLimit("brand-assets-preview", 20, 60_000), async (c) => 
 });
 
 // 7. Payment middleware
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

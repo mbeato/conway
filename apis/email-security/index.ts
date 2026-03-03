@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { validateDomain, previewCheck, fullCheck } from "./checker";
 
@@ -22,6 +24,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Rate limit: 20/min for /check (each spawns many DNS queries), 60/min global
 app.use("/check", rateLimit("email-security-check", 20, 60_000));
 app.use("*", rateLimit("email-security", 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.01));
 
 // Info endpoint
@@ -71,6 +74,7 @@ app.get("/preview", rateLimit("email-security-preview", 15, 60_000), async (c) =
 });
 
 // x402 payment gate — only /check is paid
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

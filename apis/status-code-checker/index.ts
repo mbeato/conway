@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { checkStatusCode } from "./status-checker";
 import { validateExternalUrl } from "../../shared/ssrf";
@@ -23,6 +25,7 @@ app.get("/health", c => c.json({ status: "ok" }));
 // Specific rate limit for /check (bot/burst containment)
 app.use("/check", rateLimit("status-code-checker-check", 30, 60_000)); // 30/min on /check
 app.use("*", rateLimit("status-code-checker-global", 180, 60_000)); // 180/min all others
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.001));
 
 // Info endpoint (after rate limiter)
@@ -39,6 +42,7 @@ app.get("/", (c) => {
   });
 });
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

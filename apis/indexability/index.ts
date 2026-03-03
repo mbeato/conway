@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { fullCheck, previewCheck } from "./checker";
 
@@ -25,6 +27,7 @@ app.use("/check", rateLimit("indexability-check", 30, 60_000));
 app.use("*", rateLimit("indexability", 90, 60_000));
 
 // 4. Logger
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.001));
 
 // 5. Info endpoint
@@ -66,6 +69,7 @@ app.get("/preview", rateLimit("indexability-preview", 20, 60_000), async (c) => 
 });
 
 // 7. Payment middleware
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

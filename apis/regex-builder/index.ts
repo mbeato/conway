@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 
 const API_NAME = "regex-builder";
@@ -25,6 +27,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 app.use("/build", rateLimit("regex-builder-build", 20, 60_000));
 app.use("/test", rateLimit("regex-builder-test", 20, 60_000));
 app.use("*", rateLimit("regex-builder-generic", 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, API_PRICE));
 
 // Info endpoint — after rate limiter, metered
@@ -49,6 +52,7 @@ app.get("/", (c) => {
   });
 });
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

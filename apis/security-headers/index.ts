@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { fullAudit, previewAudit } from "./analyzer";
 
@@ -23,6 +25,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Rate limits then logger
 app.use("/check", rateLimit("security-headers-check", 30, 60_000));
 app.use("*", rateLimit("security-headers", 90, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.005));
 
 // Info endpoint
@@ -56,6 +59,7 @@ app.get("/preview", rateLimit("security-headers-preview", 15, 60_000), async (c)
 });
 
 // Payment middleware
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

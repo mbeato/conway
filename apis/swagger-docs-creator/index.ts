@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { generateSwagger } from "./swagger";
 
@@ -26,6 +28,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 app.use("/generate", rateLimit("swagger-docs-creator-generate", 30, 60_000));
 app.use("*", rateLimit("swagger-docs-creator", 90, 60_000));
 
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.002));
 
 // Info endpoint
@@ -52,6 +55,7 @@ app.get("/", (c) => {
   });
 });
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

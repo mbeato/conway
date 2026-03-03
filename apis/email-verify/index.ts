@@ -3,6 +3,8 @@ import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { validateEmail, fullCheck, previewCheck } from "./checker";
 
 const app = new Hono();
@@ -22,6 +24,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Rate limits
 app.use("/check", rateLimit("email-verify-check", 30, 60_000));
 app.use("*", rateLimit("email-verify", 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.001));
 
 // Info endpoint
@@ -63,6 +66,7 @@ app.get("/preview", rateLimit("email-verify-preview", 20, 60_000), async (c) => 
 });
 
 // x402 payment gate — only /check is paid
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

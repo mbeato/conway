@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { generateMockJwt } from "./jwt";
 
@@ -27,6 +29,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Allow up to 60/min for all routes, 30/min for JWT generation (overrides global)
 app.use("/generate", rateLimit("mock-jwt-generator-generate", 30, 60_000));
 app.use("*", rateLimit("mock-jwt-generator", 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, PRICE_PER_CALL));
 
 // Info endpoint
@@ -58,6 +61,7 @@ app.get("/", (c) => {
 });
 
 // Payment — /generate is paid
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

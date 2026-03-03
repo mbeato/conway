@@ -2,6 +2,8 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { parseRobotsTxt, analyzeRobotsTxt } from "./parser";
 import { validateExternalUrl, safeFetch } from "../../shared/ssrf";
@@ -22,6 +24,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Rate limit: 15/min per IP for /analyze, 60/min global
 app.use("/analyze", rateLimit("robots-txt-parser-analyze", 15, 60_000));
 app.use("*", rateLimit("robots-txt-parser", 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.002));
 
 // Info endpoint
@@ -36,6 +39,7 @@ app.get("/", (c) => {
   });
 });
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

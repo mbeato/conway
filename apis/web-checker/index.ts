@@ -3,6 +3,8 @@ import { cors } from "hono/cors";
 import { paymentMiddleware, paidRouteWithDiscovery, resourceServer } from "../../shared/x402";
 import { apiLogger } from "../../shared/logger";
 import { rateLimit } from "../../shared/rate-limit";
+import { extractPayerWallet } from "../../shared/x402-wallet";
+import { spendCapMiddleware } from "../../shared/spend-cap";
 import { checkPresence, checkDns } from "./checker";
 
 const app = new Hono();
@@ -21,6 +23,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 // Rate limit: 20/min for /check (each spawns 9 outbound calls), 60/min global
 app.use("/check", rateLimit("web-checker-check", 20, 60_000));
 app.use("*", rateLimit("web-checker", 60, 60_000));
+app.use("*", extractPayerWallet());
 app.use("*", apiLogger(API_NAME, 0.005));
 
 // Info endpoint — after rate limiter so it's metered
@@ -59,6 +62,7 @@ app.get("/preview", rateLimit("web-checker-preview", 30, 60_000), async (c) => {
   });
 });
 
+app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
     {

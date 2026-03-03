@@ -32,6 +32,7 @@ db.exec(`
     paid INTEGER DEFAULT 0,
     amount_usd REAL DEFAULT 0,
     client_ip TEXT,
+    payer_wallet TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -41,7 +42,19 @@ db.exec(`
     amount_usd REAL NOT NULL,
     tx_hash TEXT,
     network TEXT,
+    payer_wallet TEXT,
     created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS spend_caps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    wallet TEXT UNIQUE NOT NULL,
+    label TEXT,
+    daily_limit_usd REAL,
+    monthly_limit_usd REAL,
+    enabled INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
   );
 
   CREATE TABLE IF NOT EXISTS backlog (
@@ -57,6 +70,15 @@ db.exec(`
   );
 `);
 
+// Indexes for audit log performance
+db.exec(`CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at DESC)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_requests_payer_wallet ON requests(payer_wallet)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_revenue_payer_wallet ON revenue(payer_wallet)`);
+
+// Migrations for existing tables (ALTER TABLE is safe for adding columns in SQLite)
+try { db.exec("ALTER TABLE requests ADD COLUMN payer_wallet TEXT"); } catch {}
+try { db.exec("ALTER TABLE revenue ADD COLUMN payer_wallet TEXT"); } catch {}
+
 export default db;
 
 export function logRequest(
@@ -67,19 +89,20 @@ export function logRequest(
   responseTimeMs: number,
   paid: boolean,
   amountUsd: number,
-  clientIp: string
+  clientIp: string,
+  payerWallet?: string
 ) {
   db.run(
-    `INSERT INTO requests (api_name, endpoint, method, status_code, response_time_ms, paid, amount_usd, client_ip)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [apiName, endpoint, method, statusCode, responseTimeMs, paid ? 1 : 0, amountUsd, clientIp]
+    `INSERT INTO requests (api_name, endpoint, method, status_code, response_time_ms, paid, amount_usd, client_ip, payer_wallet)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [apiName, endpoint, method, statusCode, responseTimeMs, paid ? 1 : 0, amountUsd, clientIp, payerWallet ?? null]
   );
 }
 
-export function logRevenue(apiName: string, amountUsd: number, txHash: string, network: string) {
+export function logRevenue(apiName: string, amountUsd: number, txHash: string, network: string, payerWallet?: string) {
   db.run(
-    `INSERT INTO revenue (api_name, amount_usd, tx_hash, network) VALUES (?, ?, ?, ?)`,
-    [apiName, amountUsd, txHash, network]
+    `INSERT INTO revenue (api_name, amount_usd, tx_hash, network, payer_wallet) VALUES (?, ?, ?, ?, ?)`,
+    [apiName, amountUsd, txHash, network, payerWallet ?? null]
   );
 }
 
@@ -309,4 +332,135 @@ export function getHourlyRequests(hours: number = 24): HourlyRequests[] {
     result.push(byHour.get(hour) ?? { hour, total: 0 });
   }
   return result;
+}
+
+// --- Spend cap & audit log queries ---
+
+export function getWalletSpend(wallet: string, days: number): number {
+  const result = db.query(`
+    SELECT COALESCE(SUM(amount_usd), 0) as total_usd
+    FROM revenue
+    WHERE payer_wallet = ? AND created_at > datetime('now', '-' || ? || ' days')
+  `).get(wallet, safeDays(days)) as { total_usd: number };
+  return result.total_usd;
+}
+
+export interface SpendCap {
+  id: number;
+  wallet: string;
+  label: string | null;
+  daily_limit_usd: number | null;
+  monthly_limit_usd: number | null;
+  enabled: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getSpendCap(wallet: string): SpendCap | null {
+  return db.query(`SELECT * FROM spend_caps WHERE wallet = ? AND enabled = 1`).get(wallet) as SpendCap | null;
+}
+
+export function getAllSpendCaps(): SpendCap[] {
+  return db.query(`SELECT * FROM spend_caps ORDER BY created_at DESC`).all() as SpendCap[];
+}
+
+export function upsertSpendCap(wallet: string, label: string | null, dailyLimit: number | null, monthlyLimit: number | null) {
+  db.run(
+    `INSERT INTO spend_caps (wallet, label, daily_limit_usd, monthly_limit_usd)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(wallet) DO UPDATE SET
+       label = excluded.label,
+       daily_limit_usd = excluded.daily_limit_usd,
+       monthly_limit_usd = excluded.monthly_limit_usd,
+       updated_at = datetime('now')`,
+    [wallet, label, dailyLimit, monthlyLimit]
+  );
+}
+
+export function deleteSpendCap(wallet: string) {
+  db.run(`DELETE FROM spend_caps WHERE wallet = ?`, [wallet]);
+}
+
+export interface AuditLogEntry {
+  id: number;
+  api_name: string;
+  endpoint: string;
+  method: string;
+  status_code: number;
+  response_time_ms: number;
+  paid: number;
+  amount_usd: number;
+  payer_wallet: string | null;
+  created_at: string;
+  tx_hash: string | null;
+}
+
+export function getAuditLog(
+  wallet?: string,
+  api?: string,
+  limit: number = 50,
+  offset: number = 0
+): { rows: AuditLogEntry[]; total: number } {
+  const safeLimit = Math.max(1, Math.min(200, limit));
+  const safeOffset = Math.max(0, Math.min(100_000, Math.floor(offset)));
+
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+
+  if (wallet) {
+    conditions.push("r.payer_wallet = ?");
+    params.push(wallet);
+  }
+  if (api) {
+    conditions.push("r.api_name = ?");
+    params.push(api);
+  }
+
+  const where = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
+
+  const countResult = db.query(
+    `SELECT COUNT(*) as total FROM requests r ${where}`
+  ).get(...params) as { total: number };
+
+  const rows = db.query(`
+    SELECT r.id, r.api_name, r.endpoint, r.method, r.status_code,
+           r.response_time_ms, r.paid, r.amount_usd, r.payer_wallet, r.created_at,
+           (SELECT rev.tx_hash FROM revenue rev
+            WHERE rev.api_name = r.api_name
+              AND rev.payer_wallet IS NOT NULL
+              AND rev.payer_wallet = r.payer_wallet
+              AND abs(julianday(rev.created_at) - julianday(r.created_at)) < 0.00002
+            LIMIT 1) as tx_hash
+    FROM requests r
+    ${where}
+    ORDER BY r.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, safeLimit, safeOffset) as AuditLogEntry[];
+
+  return { rows, total: countResult.total };
+}
+
+export interface WalletSummary {
+  wallet: string;
+  total_spent: number;
+  spend_7d: number;
+  spend_30d: number;
+  request_count: number;
+  last_seen: string;
+}
+
+export function getWalletSummaries(): WalletSummary[] {
+  return db.query(`
+    SELECT
+      payer_wallet as wallet,
+      COALESCE(SUM(amount_usd), 0) as total_spent,
+      COALESCE(SUM(CASE WHEN created_at > datetime('now', '-7 days') THEN amount_usd ELSE 0 END), 0) as spend_7d,
+      COALESCE(SUM(CASE WHEN created_at > datetime('now', '-30 days') THEN amount_usd ELSE 0 END), 0) as spend_30d,
+      COUNT(*) as request_count,
+      MAX(created_at) as last_seen
+    FROM revenue
+    WHERE payer_wallet IS NOT NULL
+    GROUP BY payer_wallet
+    ORDER BY spend_30d DESC
+  `).all() as WalletSummary[];
 }
