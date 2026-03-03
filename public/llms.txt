@@ -85,6 +85,23 @@
 - **What it does:** Detects the technology stack of any website — CMS, frameworks, languages, analytics, CDN, hosting, JavaScript libraries, and CSS frameworks from HTTP headers and HTML analysis.
 - **Free preview:** GET https://tech-stack.apimesh.xyz/preview?url={url} — detects technologies from HTTP headers only, no payment required.
 
+## Wallet & Spend Tracking
+
+These public endpoints require no authentication. Replace `{address}` with your 0x wallet address.
+
+### wallet_usage
+- **Endpoint:** GET https://apimesh.xyz/wallet/{address}
+- **What it does:** Returns your spend summary (daily, 7d, 30d), active spend cap and remaining budget, and your 10 most recent requests.
+
+### wallet_history
+- **Endpoint:** GET https://apimesh.xyz/wallet/{address}/history?limit=50&offset=0&api={api_name}
+- **What it does:** Paginated transaction history for your wallet. Filter by API name. Includes endpoint, status code, amount, and tx hash.
+
+### wallet_cap
+- **Endpoint:** PUT https://apimesh.xyz/wallet/{address}/cap
+- **Body:** `{ "daily_limit_usd": 1.00, "monthly_limit_usd": 10.00, "label": "My Agent" }`
+- **What it does:** Set a spend cap on your wallet. Once daily or monthly limit is reached, further paid requests return 429 before payment is attempted. Set limits to null to remove.
+
 ## Payment
 
 All paid endpoints use the x402 payment protocol. Send USDC on Base (chain ID 8453).

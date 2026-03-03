@@ -210,5 +210,30 @@ export function createServer(): McpServer {
       callApi(`https://tech-stack.apimesh.xyz/check${qs({ url })}`),
   );
 
+  server.tool(
+    "wallet_usage",
+    "Check your wallet's APIMesh spend and cap status. Returns daily/7d/30d spend totals, active spend cap with remaining budget, and recent requests. No authentication required.",
+    { address: z.string().describe("Your 0x wallet address (e.g. 0xabc...def)") },
+    async ({ address }) =>
+      callApi(`https://apimesh.xyz/wallet/${encodeURIComponent(address)}`),
+  );
+
+  server.tool(
+    "wallet_set_cap",
+    "Set a spend cap on your wallet. Once the daily or monthly USDC limit is reached, further paid API calls return 429 before payment is attempted. Set limits to null to remove a cap.",
+    {
+      address: z.string().describe("Your 0x wallet address"),
+      daily_limit_usd: z.number().nullable().describe("Max daily spend in USD (null = unlimited)"),
+      monthly_limit_usd: z.number().nullable().describe("Max monthly spend in USD (null = unlimited)"),
+      label: z.string().nullable().optional().describe("Friendly label (e.g. 'Claude Desktop')"),
+    },
+    async ({ address, daily_limit_usd, monthly_limit_usd, label }) =>
+      callApi(`https://apimesh.xyz/wallet/${encodeURIComponent(address)}/cap`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ daily_limit_usd, monthly_limit_usd, label: label ?? null }),
+      }),
+  );
+
   return server;
 }
