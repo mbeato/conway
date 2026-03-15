@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { join } from "path";
+import { migrate } from "./migrate";
 
 const dataDir = join(import.meta.dir, "..", "data");
 Bun.spawnSync(["mkdir", "-p", dataDir]);
@@ -11,73 +12,7 @@ db.exec("PRAGMA busy_timeout=5000;");
 db.exec("PRAGMA foreign_keys=ON;");
 db.exec("PRAGMA secure_delete=ON;");
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS api_registry (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,
-    port INTEGER NOT NULL,
-    subdomain TEXT UNIQUE NOT NULL,
-    status TEXT DEFAULT 'active',
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS requests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    api_name TEXT NOT NULL,
-    endpoint TEXT NOT NULL,
-    method TEXT NOT NULL,
-    status_code INTEGER,
-    response_time_ms REAL,
-    paid INTEGER DEFAULT 0,
-    amount_usd REAL DEFAULT 0,
-    client_ip TEXT,
-    payer_wallet TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS revenue (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    api_name TEXT NOT NULL,
-    amount_usd REAL NOT NULL,
-    tx_hash TEXT,
-    network TEXT,
-    payer_wallet TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS spend_caps (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    wallet TEXT UNIQUE NOT NULL,
-    label TEXT,
-    daily_limit_usd REAL,
-    monthly_limit_usd REAL,
-    enabled INTEGER DEFAULT 1,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS backlog (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,
-    description TEXT,
-    demand_score REAL DEFAULT 0,
-    effort_score REAL DEFAULT 0,
-    competition_score REAL DEFAULT 0,
-    overall_score REAL DEFAULT 0,
-    status TEXT DEFAULT 'pending',
-    created_at TEXT DEFAULT (datetime('now'))
-  );
-`);
-
-// Migrations for existing tables (ALTER TABLE is safe for adding columns in SQLite)
-try { db.exec("ALTER TABLE requests ADD COLUMN payer_wallet TEXT"); } catch {}
-try { db.exec("ALTER TABLE revenue ADD COLUMN payer_wallet TEXT"); } catch {}
-
-// Indexes for audit log performance (must run after migrations add payer_wallet)
-db.exec(`CREATE INDEX IF NOT EXISTS idx_requests_created_at ON requests(created_at DESC)`);
-db.exec(`CREATE INDEX IF NOT EXISTS idx_requests_payer_wallet ON requests(payer_wallet)`);
-db.exec(`CREATE INDEX IF NOT EXISTS idx_revenue_payer_wallet ON revenue(payer_wallet)`);
+migrate(db, join(import.meta.dir, "..", "data", "migrations"));
 
 export default db;
 
