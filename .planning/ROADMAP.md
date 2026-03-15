@@ -1,0 +1,170 @@
+# Roadmap: APIMesh Stripe Billing & User Accounts
+
+## Overview
+
+This roadmap delivers traditional Stripe billing alongside the existing x402 crypto payment flow. It starts with database foundation and shared modules, builds auth flows, adds Stripe billing and API key management, integrates API key auth across all 21 APIs, and finishes with MCP server support and landing page updates. The dependency chain ensures the existing x402 flow remains untouched until Phase 7, where the branching middleware is carefully inserted.
+
+## Phases
+
+**Phase Numbering:**
+- Integer phases (1, 2, 3): Planned milestone work
+- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+
+Decimal phases appear between their surrounding integers in numeric order.
+
+- [ ] **Phase 1: Foundation** - Migration runner, database schema, shared modules, email domain setup
+- [ ] **Phase 2: Signup & Login** - User registration, email verification, login, logout, session cookies
+- [ ] **Phase 3: Auth Hardening & Sessions** - Lockout, password reset, password change, session management UI
+- [ ] **Phase 4: API Keys** - Key creation, display, revocation, management page
+- [ ] **Phase 5: Stripe Billing** - Checkout integration, webhook handler, credit purchases
+- [ ] **Phase 6: Credits & Account Dashboard** - Balance display, transaction history, low-balance alerts, account overview
+- [ ] **Phase 7: API Key Auth Middleware** - Branching middleware across all 21 APIs, credit deduction, Caddy routes
+- [ ] **Phase 8: MCP & Landing Page** - MCP server API key support, landing page signup CTA
+
+## Phase Details
+
+### Phase 1: Foundation
+**Goal**: All database tables, migration infrastructure, and shared modules exist and are independently testable
+**Depends on**: Nothing (first phase)
+**Requirements**: INFRA-01, INFRA-02, INFRA-05, INFRA-06, SESS-01, SESS-07, BILL-06, KEY-02, KEY-04
+**Success Criteria** (what must be TRUE):
+  1. Running the migration runner creates all 7 new tables and 2 ALTER TABLE changes without errors on a fresh database
+  2. Auth module can hash a password with Argon2id and verify it round-trips correctly
+  3. Credits module can atomically deduct from a balance and reject when insufficient (unit test passes)
+  4. API key module can generate a key, store only its hash, and look it up by hash
+  5. Resend domain verification is complete (SPF, DKIM, DMARC records propagated for apimesh.xyz)
+**Plans**: TBD
+
+Plans:
+- [ ] 01-01: Migration runner and database schema
+- [ ] 01-02: Shared modules (auth, credits, api-key, email, validation)
+- [ ] 01-03: Resend domain verification and auth rate limiters
+
+### Phase 2: Signup & Login
+**Goal**: Users can create an account, verify their email, log in, and log out
+**Depends on**: Phase 1
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-08, SESS-02, SESS-03, FE-01, FE-02, FE-08, FE-09
+**Success Criteria** (what must be TRUE):
+  1. User can sign up with email and password, receives a 6-digit verification code via email, and can verify their account
+  2. User with a weak password (zxcvbn < 3) or breached password (HIBP) is rejected at signup with a clear message
+  3. User can log in and their session persists across browser restarts (httpOnly Secure cookie, 30-day sliding window)
+  4. User can log out and the session is destroyed (cookie cleared, server-side record deleted)
+  5. Signup and login pages render with the existing dark theme (Space Grotesk, JetBrains Mono) and work without JavaScript frameworks
+**Plans**: TBD
+
+Plans:
+- [ ] 02-01: Signup flow (registration, HIBP check, zxcvbn, email verification)
+- [ ] 02-02: Login, logout, and session cookie management
+- [ ] 02-03: Auth frontend pages (signup.html, login.html, verify.html)
+
+### Phase 3: Auth Hardening & Sessions
+**Goal**: Account security features and session management are complete
+**Depends on**: Phase 2
+**Requirements**: AUTH-07, AUTH-09, AUTH-10, AUTH-11, SESS-04, SESS-05, SESS-06, FE-03, FE-07
+**Success Criteria** (what must be TRUE):
+  1. After 5 failed login attempts, the account is locked for 15 minutes (progressive: 10 -> 1hr, 20 -> 24hr)
+  2. User can reset their password via a 6-digit email code, and all existing sessions are invalidated afterward
+  3. User can change their password from settings (requires current password) and continue their session
+  4. User can view active sessions (showing IP, user agent, created date) and revoke any individual session or all sessions
+  5. Creating an 11th session auto-revokes the oldest session (max 10 active)
+**Plans**: TBD
+
+Plans:
+- [ ] 03-01: Progressive lockout and auth event logging
+- [ ] 03-02: Password reset and password change flows
+- [ ] 03-03: Session management UI and session limits
+
+### Phase 4: API Keys
+**Goal**: Users can create and manage API keys for programmatic access
+**Depends on**: Phase 2
+**Requirements**: KEY-01, KEY-03, KEY-05, KEY-06, KEY-07, FE-05
+**Success Criteria** (what must be TRUE):
+  1. User can create an API key with a custom label and sees the full key exactly once (with copy button and never-shown-again warning)
+  2. User can list their keys showing prefix (sk_live_...), label, last used date, and status
+  3. User can revoke a key and it immediately stops working for API calls
+  4. Maximum 5 active keys per account is enforced; creating a 6th is rejected
+**Plans**: TBD
+
+Plans:
+- [ ] 04-01: API key CRUD routes and storage
+- [ ] 04-02: Key management page (/account/keys)
+
+### Phase 5: Stripe Billing
+**Goal**: Users can purchase credits via Stripe Checkout with webhook-confirmed grants
+**Depends on**: Phase 2
+**Requirements**: BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, INFRA-04, FE-06
+**Success Criteria** (what must be TRUE):
+  1. User can click a tier card ($5/$20/$50/$100) and complete purchase through Stripe Checkout
+  2. Volume bonuses are applied correctly (0%/10%/20%/30% per tier) and shown before purchase
+  3. Credits appear in the user's balance only after webhook confirmation (never on client redirect)
+  4. Processing the same Stripe payment_intent twice does not double-grant credits
+  5. Webhook signature is verified with timing-safe comparison and events older than 5 minutes are rejected
+**Plans**: TBD
+
+Plans:
+- [ ] 05-01: Stripe Checkout session creation and billing routes
+- [ ] 05-02: Webhook handler with idempotency and signature verification
+- [ ] 05-03: Billing page (/account/billing) with tier cards
+
+### Phase 6: Credits & Account Dashboard
+**Goal**: Users have full visibility into their credit balance, usage, and account status
+**Depends on**: Phase 5
+**Requirements**: BILL-07, BILL-08, BILL-09, FE-04
+**Success Criteria** (what must be TRUE):
+  1. User can view their credit balance prominently on the account overview page
+  2. User can browse transaction history showing purchases, usage deductions, and timestamps
+  3. User receives an email alert when credits drop below their configured threshold
+  4. Account overview page shows balance, usage chart, quick-buy button, and active key count
+**Plans**: TBD
+
+Plans:
+- [ ] 06-01: Transaction history and balance display
+- [ ] 06-02: Low-balance email alerts and account overview page
+
+### Phase 7: API Key Auth Middleware
+**Goal**: All 21 APIs accept API key authentication as an alternative to x402, with atomic credit deduction
+**Depends on**: Phase 4, Phase 6
+**Requirements**: INT-01, INT-02, INT-03, INT-04, INT-05, INT-06, INT-07, INT-08, INFRA-03
+**Success Criteria** (what must be TRUE):
+  1. Sending Authorization: Bearer sk_live_... to any of the 21 APIs deducts credits and returns the response
+  2. Sending a request with no Bearer header falls through to the existing x402 flow (zero breaking changes verified)
+  3. Insufficient credits returns 402 with balance info; invalid/revoked key returns 401
+  4. API responses include X-Credits-Remaining header when authenticated via API key
+  5. The middleware is inserted at one place in the router (not 21 separate insertions)
+**Plans**: TBD
+
+Plans:
+- [ ] 07-01: ApiKeyOrX402 branching middleware
+- [ ] 07-02: Credit deduction integration and response headers
+- [ ] 07-03: Caddy route configuration and integration testing
+
+### Phase 8: MCP & Landing Page
+**Goal**: MCP server supports API key auth and landing page drives signups
+**Depends on**: Phase 7
+**Requirements**: MCP-01, MCP-02, MCP-03, FE-10
+**Success Criteria** (what must be TRUE):
+  1. Setting APIMESH_API_KEY env var causes the MCP server to pass it as Authorization: Bearer on all API calls
+  2. MCP server without APIMESH_API_KEY continues to work via x402/free previews (no regression)
+  3. Landing page at apimesh.xyz has a visible "Sign Up" CTA that links to /signup
+**Plans**: TBD
+
+Plans:
+- [ ] 08-01: MCP server API key support
+- [ ] 08-02: Landing page update with signup CTA
+
+## Progress
+
+**Execution Order:**
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
+Note: Phases 3, 4, and 5 all depend on Phase 2 but are independent of each other.
+
+| Phase | Plans Complete | Status | Completed |
+|-------|----------------|--------|-----------|
+| 1. Foundation | 1/3 | In Progress|  |
+| 2. Signup & Login | 0/3 | Not started | - |
+| 3. Auth Hardening & Sessions | 0/3 | Not started | - |
+| 4. API Keys | 0/2 | Not started | - |
+| 5. Stripe Billing | 0/3 | Not started | - |
+| 6. Credits & Account Dashboard | 0/2 | Not started | - |
+| 7. API Key Auth Middleware | 0/3 | Not started | - |
+| 8. MCP & Landing Page | 0/2 | Not started | - |
