@@ -12,9 +12,9 @@
 - [x] **AUTH-03**: User receives 6-digit verification code via email after signup
 - [x] **AUTH-04**: User can verify email by entering 6-digit code (expires 10min, 3 attempts max)
 - [x] **AUTH-05**: User can resend verification code (1 per 60s per email, 5 per IP per hour)
-- [ ] **AUTH-06**: User can log in with email and password (constant-time, no email enumeration)
+- [x] **AUTH-06**: User can log in with email and password (constant-time, no email enumeration)
 - [ ] **AUTH-07**: Failed logins trigger progressive lockout (5 -> 15min, 10 -> 1hr, 20 -> 24hr)
-- [ ] **AUTH-08**: User can log out and have session destroyed
+- [x] **AUTH-08**: User can log out and have session destroyed
 - [ ] **AUTH-09**: User can request password reset via 6-digit email code
 - [ ] **AUTH-10**: Password reset invalidates all existing sessions
 - [ ] **AUTH-11**: User can change password from settings (current + new required)
@@ -22,8 +22,8 @@
 ### Sessions
 
 - [x] **SESS-01**: Sessions stored server-side in SQLite with crypto-random 256-bit IDs
-- [ ] **SESS-02**: Session cookie is httpOnly, Secure, SameSite=Strict, 30-day expiry
-- [ ] **SESS-03**: Session expiry uses sliding window (refreshed on each authenticated request)
+- [x] **SESS-02**: Session cookie is httpOnly, Secure, SameSite=Strict, 30-day expiry
+- [x] **SESS-03**: Session expiry uses sliding window (refreshed on each authenticated request)
 - [ ] **SESS-04**: Maximum 10 active sessions per user (oldest auto-revoked on new login)
 - [ ] **SESS-05**: User can view active sessions (IP, user agent, created date)
 - [ ] **SESS-06**: User can revoke individual sessions or all sessions
@@ -133,15 +133,15 @@
 | AUTH-03 | Phase 2 | Complete |
 | AUTH-04 | Phase 2 | Complete |
 | AUTH-05 | Phase 2 | Complete |
-| AUTH-06 | Phase 2 | Pending |
+| AUTH-06 | Phase 2 | Complete |
 | AUTH-07 | Phase 3 | Pending |
-| AUTH-08 | Phase 2 | Pending |
+| AUTH-08 | Phase 2 | Complete |
 | AUTH-09 | Phase 3 | Pending |
 | AUTH-10 | Phase 3 | Pending |
 | AUTH-11 | Phase 3 | Pending |
 | SESS-01 | Phase 1 | Complete |
-| SESS-02 | Phase 2 | Pending |
-| SESS-03 | Phase 2 | Pending |
+| SESS-02 | Phase 2 | Complete |
+| SESS-03 | Phase 2 | Complete |
 | SESS-04 | Phase 3 | Pending |
 | SESS-05 | Phase 3 | Pending |
 | SESS-06 | Phase 3 | Pending |

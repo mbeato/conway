@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 ## Current Position
 
 Phase: 2 of 8 (Signup & Login)
-Plan: 1 of 3 in current phase (complete)
+Plan: 2 of 3 in current phase (complete)
 Status: Executing Phase 2
-Last activity: 2026-03-16 — Completed 02-01 (Signup & Email Verification)
+Last activity: 2026-03-16 — Completed 02-02 (Login, Logout & Session Management)
 
-Progress: [███░░░░░░░] 19%
+Progress: [████░░░░░░] 24%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: 4min
-- Total execution time: 0.25 hours
+- Total execution time: 0.33 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 12min | 4min |
-| 02-signup-login | 1 | 3min | 3min |
+| 02-signup-login | 2 | 8min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (4min), 01-02 (3min), 01-03 (5min), 02-01 (3min)
+- Last 5 plans: 01-02 (3min), 01-03 (5min), 02-01 (3min), 02-02 (5min)
 - Trend: stable
 
 *Updated after each plan completion*
@@ -57,6 +57,9 @@ Recent decisions affecting current work:
 - 02-01: Fail-open on HIBP API errors to avoid blocking signups
 - 02-01: Unverified re-signup deletes old user to prevent stuck accounts
 - 02-01: Anti-enumeration on resend-code (generic success for unknown emails)
+- 02-02: Pre-computed dummy Argon2id hash at startup for constant-time login
+- 02-02: Unverified users get 200 with redirect hint (not 401) for frontend redirect to /verify
+- 02-02: Account page CSP allows unsafe-inline for inline logout script (will externalize in 02-03)
 
 ### Pending Todos
 
@@ -71,5 +74,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-16
-Stopped at: Completed 02-01-PLAN.md
+Stopped at: Completed 02-02-PLAN.md
 Resume file: None
