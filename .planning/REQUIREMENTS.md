@@ -87,8 +87,8 @@
 - [x] **INFRA-02**: 7 new SQLite tables + 2 ALTER TABLE on requests + indexes
 - [ ] **INFRA-03**: Caddy route blocks for /auth/*, /account*, /billing/* with Cache-Control: no-store
 - [ ] **INFRA-04**: Webhook route with separate handler (no CSP, larger body limit)
-- [ ] **INFRA-05**: Auth-specific rate limiters separate from API rate limits
-- [ ] **INFRA-06**: Resend domain verification (SPF, DKIM, DMARC for apimesh.xyz)
+- [x] **INFRA-05**: Auth-specific rate limiters separate from API rate limits
+- [x] **INFRA-06**: Resend domain verification (SPF, DKIM, DMARC for apimesh.xyz)
 
 ## v2 Requirements
 
@@ -187,8 +187,8 @@
 | INFRA-02 | Phase 1 | Complete |
 | INFRA-03 | Phase 7 | Pending |
 | INFRA-04 | Phase 5 | Pending |
-| INFRA-05 | Phase 1 | Pending |
-| INFRA-06 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Complete |
+| INFRA-06 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 61 total
