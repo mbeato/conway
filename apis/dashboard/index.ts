@@ -159,6 +159,23 @@ app.get("/verify", publicLimit, async (c) => {
   return c.text("Page not found", 404);
 });
 
+// Forgot password page — public, no auth
+app.get("/forgot-password", publicLimit, async (c) => {
+  const file = Bun.file(join(import.meta.dir, "../landing/forgot-password.html"));
+  if (await file.exists()) {
+    return new Response(await file.text(), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; connect-src 'self'",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+  return c.text("Page not found", 404);
+});
+
 // Landing JS — external script (CSP: script-src 'self')
 app.get("/landing.js", publicLimit, async (c) => {
   const file = Bun.file(join(import.meta.dir, "../landing/landing.js"));

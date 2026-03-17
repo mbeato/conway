@@ -481,6 +481,184 @@
   }
 
   /* ============================================================
+     Forgot Password Page Handler
+     ============================================================ */
+  function initForgotPassword() {
+    var step1 = document.getElementById("forgot-step-1");
+    var step2 = document.getElementById("forgot-step-2");
+    if (!step1 || !step2) return;
+
+    var storedEmail = "";
+
+    /* --- Step 1: Send reset code --- */
+    var form1 = document.getElementById("forgot-password-form");
+    var btn1 = document.getElementById("submit-btn");
+    if (!form1 || !btn1) return;
+    var originalText1 = btn1.textContent;
+
+    form1.addEventListener("submit", function (e) {
+      e.preventDefault();
+      hideError();
+
+      var email = document.getElementById("email").value.trim();
+      if (!email) {
+        showError("Email is required.");
+        return;
+      }
+
+      setLoading(btn1, true);
+
+      fetch("/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email }),
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { status: res.status, data: data };
+          });
+        })
+        .then(function (result) {
+          if (result.status === 429) {
+            showError(result.data.error || "Too many requests. Try again later.");
+            setLoading(btn1, false, originalText1);
+            return;
+          }
+          if (result.data.error && result.status !== 200) {
+            showError(result.data.error);
+            setLoading(btn1, false, originalText1);
+            return;
+          }
+          /* Always shows success (anti-enumeration) */
+          storedEmail = email;
+          step1.classList.add("hidden");
+          step2.classList.remove("hidden");
+          /* Focus first code input */
+          var firstInput = step2.querySelector(".code-input");
+          if (firstInput) firstInput.focus();
+        })
+        .catch(function () {
+          showError("Network error. Please try again.");
+          setLoading(btn1, false, originalText1);
+        });
+    });
+
+    /* --- Step 2: Code input widget (no auto-submit, part of form) --- */
+    var codeInputs = step2.querySelectorAll(".code-input");
+    codeInputs.forEach(function (input, idx) {
+      input.addEventListener("input", function () {
+        input.value = input.value.replace(/\D/g, "");
+        if (input.value && idx < codeInputs.length - 1) {
+          codeInputs[idx + 1].focus();
+        }
+      });
+
+      input.addEventListener("keydown", function (e) {
+        if (e.key === "Backspace" && !input.value && idx > 0) {
+          codeInputs[idx - 1].focus();
+          codeInputs[idx - 1].value = "";
+          e.preventDefault();
+        }
+      });
+
+      input.addEventListener("paste", function (e) {
+        e.preventDefault();
+        var paste = (e.clipboardData || window.clipboardData)
+          .getData("text")
+          .replace(/\D/g, "")
+          .slice(0, 6);
+        for (var i = 0; i < paste.length && i < codeInputs.length; i++) {
+          codeInputs[i].value = paste[i];
+        }
+        if (paste.length > 0) {
+          var focusIdx = Math.min(paste.length, codeInputs.length - 1);
+          codeInputs[focusIdx].focus();
+        }
+      });
+
+      input.addEventListener("focus", function () {
+        input.select();
+      });
+    });
+
+    /* --- Step 2: Reset password form submit --- */
+    var form2 = document.getElementById("reset-password-form");
+    var btn2 = document.getElementById("reset-btn");
+    if (!form2 || !btn2) return;
+    var originalText2 = btn2.textContent;
+
+    /* Error display for step 2 */
+    function showError2(msg) {
+      var el = document.getElementById("error-msg-2");
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add("visible");
+    }
+
+    function hideError2() {
+      var el = document.getElementById("error-msg-2");
+      if (!el) return;
+      el.textContent = "";
+      el.classList.remove("visible");
+    }
+
+    form2.addEventListener("submit", function (e) {
+      e.preventDefault();
+      hideError2();
+
+      /* Gather code from 6 inputs */
+      var code = "";
+      codeInputs.forEach(function (inp) {
+        code += inp.value;
+      });
+
+      if (code.length !== 6) {
+        showError2("Please enter the 6-digit code.");
+        return;
+      }
+
+      var password = document.getElementById("password").value;
+      var confirmEl = document.getElementById("confirm-password");
+      var confirm = confirmEl ? confirmEl.value : password;
+
+      if (!password) {
+        showError2("New password is required.");
+        return;
+      }
+
+      if (password !== confirm) {
+        showError2("Passwords do not match.");
+        return;
+      }
+
+      setLoading(btn2, true);
+
+      fetch("/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: storedEmail, code: code, password: password }),
+      })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { status: res.status, data: data };
+          });
+        })
+        .then(function (result) {
+          if (result.data.success && result.data.redirect) {
+            window.location.href = result.data.redirect;
+          } else {
+            showError2(result.data.error || "Reset failed.");
+            setLoading(btn2, false, originalText2);
+          }
+        })
+        .catch(function () {
+          showError2("Network error. Please try again.");
+          setLoading(btn2, false, originalText2);
+        });
+    });
+  }
+
+  /* ============================================================
      Init — run on DOMContentLoaded
      ============================================================ */
   document.addEventListener("DOMContentLoaded", function () {
@@ -492,5 +670,6 @@
     initLoginForm();
     initLogout();
     initVerifyEmail();
+    initForgotPassword();
   });
 })();
