@@ -467,9 +467,9 @@ app.post("/auth/verify", authLimit, async (c) => {
   setCookie(c, "session", sessionToken, {
     httpOnly: true,
     secure: true,
-    sameSite: "Lax",
+    sameSite: "Strict",
     path: "/",
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60,
   });
 
   logAuthEvent(db, user.id, "email_verified", ip, userAgent);
@@ -571,17 +571,17 @@ app.post("/auth/login", authLimit, async (c) => {
   // Always verify password (even for unverified users) to maintain constant timing
   const passwordValid = await verifyPassword(password, user.password_hash);
 
+  if (!passwordValid) {
+    logAuthEvent(db, user.id, "login_failed", ip, userAgent, { reason: "wrong_password" });
+    return c.json({ error: "Invalid email or password." }, 401);
+  }
+
   if (!user.email_verified) {
-    // Unverified user — redirect to verify page (200 so frontend can redirect)
+    // Only reveal unverified status if password is correct (anti-enumeration)
     return c.json({
       error: "email_not_verified",
       redirect: `/verify?email=${encodeURIComponent(normalized)}`,
     });
-  }
-
-  if (!passwordValid) {
-    logAuthEvent(db, user.id, "login_failed", ip, userAgent, { reason: "wrong_password" });
-    return c.json({ error: "Invalid email or password." }, 401);
   }
 
   // Password valid, email verified — create session
