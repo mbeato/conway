@@ -9,29 +9,29 @@ See: .planning/PROJECT.md (updated 2026-03-15)
 
 ## Current Position
 
-Phase: 2 of 8 (Signup & Login)
-Plan: 2 of 3 in current phase (complete)
-Status: Executing Phase 2
-Last activity: 2026-03-16 — Completed 02-02 (Login, Logout & Session Management)
+Phase: 2 of 8 (Signup & Login) -- COMPLETE
+Plan: 3 of 3 in current phase (complete)
+Status: Phase 2 Complete
+Last activity: 2026-03-17 — Completed 02-03 (Auth Pages)
 
-Progress: [████░░░░░░] 24%
+Progress: [██████░░░░] 29%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
+- Total plans completed: 6
 - Average duration: 4min
-- Total execution time: 0.33 hours
+- Total execution time: 0.38 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3 | 12min | 4min |
-| 02-signup-login | 2 | 8min | 4min |
+| 02-signup-login | 3 | 13min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 01-02 (3min), 01-03 (5min), 02-01 (3min), 02-02 (5min)
+- Last 5 plans: 01-03 (5min), 02-01 (3min), 02-02 (5min), 02-03 (5min)
 - Trend: stable
 
 *Updated after each plan completion*
@@ -60,6 +60,9 @@ Recent decisions affecting current work:
 - 02-02: Pre-computed dummy Argon2id hash at startup for constant-time login
 - 02-02: Unverified users get 200 with redirect hint (not 401) for frontend redirect to /verify
 - 02-02: Account page CSP allows unsafe-inline for inline logout script (will externalize in 02-03)
+- 02-03: Auto-login after email verification (session created in /auth/verify, redirect to /account)
+- 02-03: Confirm password field on signup with client-side validation
+- 02-03: Rate limiter dev-mode bypass (fallback to 127.0.0.1 when no x-real-ip)
 
 ### Pending Todos
 
@@ -73,6 +76,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-16
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-03-17
+Stopped at: Completed 02-03-PLAN.md (Phase 2 complete)
 Resume file: None

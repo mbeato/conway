@@ -70,15 +70,15 @@
 
 ### Frontend
 
-- [ ] **FE-01**: Signup page at /signup with email + password form
-- [ ] **FE-02**: Login page at /login with email + password form
+- [x] **FE-01**: Signup page at /signup with email + password form
+- [x] **FE-02**: Login page at /login with email + password form
 - [ ] **FE-03**: Password reset page at /forgot-password
 - [ ] **FE-04**: Account overview at /account (balance, usage chart, quick buy, active keys)
 - [ ] **FE-05**: API key management at /account/keys (create, list, revoke)
 - [ ] **FE-06**: Billing page at /account/billing (balance, tier cards, transaction history)
 - [ ] **FE-07**: Settings page at /account/settings (change password, active sessions, logout all)
-- [ ] **FE-08**: All account pages use server-rendered HTML + vanilla JS (no React)
-- [ ] **FE-09**: Design matches existing landing page (Space Grotesk, JetBrains Mono, dark theme)
+- [x] **FE-08**: All account pages use server-rendered HTML + vanilla JS (no React)
+- [x] **FE-09**: Design matches existing landing page (Space Grotesk, JetBrains Mono, dark theme)
 - [ ] **FE-10**: Landing page updated with "Sign Up" CTA and reframed copy
 
 ### Infrastructure
@@ -173,15 +173,15 @@
 | MCP-01 | Phase 8 | Pending |
 | MCP-02 | Phase 8 | Pending |
 | MCP-03 | Phase 8 | Pending |
-| FE-01 | Phase 2 | Pending |
-| FE-02 | Phase 2 | Pending |
+| FE-01 | Phase 2 | Complete |
+| FE-02 | Phase 2 | Complete |
 | FE-03 | Phase 3 | Pending |
 | FE-04 | Phase 6 | Pending |
 | FE-05 | Phase 4 | Pending |
 | FE-06 | Phase 5 | Pending |
 | FE-07 | Phase 3 | Pending |
-| FE-08 | Phase 2 | Pending |
-| FE-09 | Phase 2 | Pending |
+| FE-08 | Phase 2 | Complete |
+| FE-09 | Phase 2 | Complete |
 | FE-10 | Phase 8 | Pending |
 | INFRA-01 | Phase 1 | Complete |
 | INFRA-02 | Phase 1 | Complete |
