@@ -661,6 +661,224 @@ async function getAuthenticatedUser(c: any): Promise<{ userId: string; sessionId
   return { userId: session.user_id, sessionId };
 }
 
+// --- Forgot Password route ---
+app.post("/auth/forgot-password", authLimit, async (c) => {
+  const ip = getIp(c);
+  const userAgent = getUserAgent(c);
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { email } = body;
+  if (!email) {
+    return c.json({ error: "Email is required" }, 400);
+  }
+
+  const normalized = normalizeEmail(email);
+  const emailCheck = validateEmail(normalized);
+  if (!emailCheck.valid) {
+    return c.json({ error: emailCheck.error }, 400);
+  }
+
+  // Rate limit by IP and email
+  const rlIp = checkAuthRateLimit(db, "password-reset-ip", ip);
+  if (!rlIp.allowed) {
+    c.header("Retry-After", String(rlIp.retryAfter));
+    return c.json({ error: "Too many requests. Try again later." }, 429);
+  }
+
+  const rlEmail = checkAuthRateLimit(db, "password-reset-email", normalized);
+  if (!rlEmail.allowed) {
+    c.header("Retry-After", String(rlEmail.retryAfter));
+    return c.json({ error: "Too many requests. Try again later." }, 429);
+  }
+
+  // Look up user — always return success regardless (anti-enumeration)
+  const user = db.query("SELECT id, email_verified FROM users WHERE email = ?").get(normalized) as { id: string; email_verified: number } | null;
+
+  if (user && user.email_verified) {
+    // Delete old password reset codes
+    db.run("DELETE FROM verification_codes WHERE user_id = ? AND purpose = 'password_reset'", [user.id]);
+
+    // Generate and hash code
+    const code = generateVerificationCode();
+    const codeHash = await hashCode(code);
+    const codeId = crypto.randomUUID();
+
+    // Insert with 10-minute expiry
+    db.run(
+      "INSERT INTO verification_codes (id, user_id, code_hash, purpose, expires_at) VALUES (?, ?, ?, 'password_reset', datetime('now', '+10 minutes'))",
+      [codeId, user.id, codeHash]
+    );
+
+    // Send reset code email
+    await sendPasswordResetCode(normalized, code);
+  }
+
+  logAuthEvent(db, user?.id ?? null, "password_reset_requested", ip, userAgent);
+
+  return c.json({ success: true });
+});
+
+// --- Reset Password route ---
+app.post("/auth/reset-password", authLimit, async (c) => {
+  const ip = getIp(c);
+  const userAgent = getUserAgent(c);
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { email, code, password } = body;
+  if (!email || !code || !password) {
+    return c.json({ error: "Email, code, and new password are required" }, 400);
+  }
+
+  // Rate limit by IP
+  const rlIp = checkAuthRateLimit(db, "password-reset-ip", ip);
+  if (!rlIp.allowed) {
+    c.header("Retry-After", String(rlIp.retryAfter));
+    return c.json({ error: "Too many requests. Try again later." }, 429);
+  }
+
+  const normalized = normalizeEmail(email);
+
+  // Look up user
+  const user = db.query("SELECT id, failed_logins FROM users WHERE email = ?").get(normalized) as { id: string; failed_logins: number } | null;
+  if (!user) {
+    return c.json({ error: "Invalid or expired code." }, 400);
+  }
+
+  // Look up valid verification code
+  const verCode = db.query(
+    "SELECT id, code_hash, attempts FROM verification_codes WHERE user_id = ? AND purpose = 'password_reset' AND expires_at > datetime('now') ORDER BY created_at DESC LIMIT 1"
+  ).get(user.id) as { id: string; code_hash: string; attempts: number } | null;
+
+  if (!verCode) {
+    return c.json({ error: "Invalid or expired code." }, 400);
+  }
+
+  // Check max attempts
+  if (verCode.attempts >= 3) {
+    db.run("DELETE FROM verification_codes WHERE id = ?", [verCode.id]);
+    return c.json({ error: "Too many attempts. Request a new code." }, 400);
+  }
+
+  // HMAC-verify the code
+  const submittedHash = await hashCode(String(code).trim());
+  if (submittedHash !== verCode.code_hash) {
+    db.run("UPDATE verification_codes SET attempts = attempts + 1 WHERE id = ?", [verCode.id]);
+    return c.json({ error: "Invalid or expired code." }, 400);
+  }
+
+  // Validate new password strength
+  const pwCheck = validatePassword(password);
+  if (!pwCheck.valid) {
+    return c.json({ error: pwCheck.error, score: pwCheck.score }, 400);
+  }
+
+  // Check HIBP breach
+  const breached = await isPasswordBreached(password);
+  if (breached) {
+    return c.json({ error: "This password has appeared in a data breach. Please choose a different password." }, 400);
+  }
+
+  // Hash new password and update user
+  const passwordHash = await hashPassword(password);
+  db.run(
+    "UPDATE users SET password_hash = ?, failed_logins = 0, locked_until = NULL, updated_at = datetime('now') WHERE id = ?",
+    [passwordHash, user.id]
+  );
+
+  // Delete the verification code
+  db.run("DELETE FROM verification_codes WHERE id = ?", [verCode.id]);
+
+  // Delete ALL sessions
+  deleteUserSessions(db, user.id);
+
+  // Create fresh session (auto-login)
+  const sessionToken = createSession(db, user.id, ip, userAgent);
+  setCookie(c, "session", sessionToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Strict",
+    path: "/",
+    maxAge: 30 * 24 * 60 * 60,
+  });
+
+  logAuthEvent(db, user.id, "password_reset_completed", ip, userAgent);
+
+  return c.json({ success: true, redirect: "/account" });
+});
+
+// --- Change Password route (session required) ---
+app.post("/auth/change-password", authLimit, async (c) => {
+  const ip = getIp(c);
+  const userAgent = getUserAgent(c);
+
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.json({ error: "Not authenticated." }, 401);
+  }
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { currentPassword, newPassword } = body;
+  if (!currentPassword || !newPassword) {
+    return c.json({ error: "Current password and new password are required" }, 400);
+  }
+
+  // Look up user password hash
+  const user = db.query("SELECT password_hash FROM users WHERE id = ?").get(auth.userId) as { password_hash: string } | null;
+  if (!user) {
+    return c.json({ error: "User not found." }, 400);
+  }
+
+  // Verify current password
+  const passwordValid = await verifyPassword(currentPassword, user.password_hash);
+  if (!passwordValid) {
+    return c.json({ error: "Current password is incorrect." }, 401);
+  }
+
+  // Validate new password strength
+  const pwCheck = validatePassword(newPassword);
+  if (!pwCheck.valid) {
+    return c.json({ error: pwCheck.error, score: pwCheck.score }, 400);
+  }
+
+  // Check HIBP breach
+  const breached = await isPasswordBreached(newPassword);
+  if (breached) {
+    return c.json({ error: "This password has appeared in a data breach. Please choose a different password." }, 400);
+  }
+
+  // Hash and update
+  const passwordHash = await hashPassword(newPassword);
+  db.run(
+    "UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?",
+    [passwordHash, auth.userId]
+  );
+
+  // Invalidate all OTHER sessions (keep current)
+  deleteUserSessions(db, auth.userId, auth.sessionId);
+
+  logAuthEvent(db, auth.userId, "password_changed", ip, userAgent);
+
+  return c.json({ success: true });
+});
+
 // --- Account page (placeholder, session-protected) ---
 app.get("/account", publicLimit, async (c) => {
   const auth = await getAuthenticatedUser(c);
