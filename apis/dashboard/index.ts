@@ -668,6 +668,21 @@ app.post("/auth/logout", authLimit, async (c) => {
   return c.json({ success: true, redirect: "/login" });
 });
 
+// --- User-agent parser (session management) ---
+function parseUserAgent(ua: string): { browser: string; os: string } {
+  let browser = "Unknown";
+  let os = "Unknown";
+  if (/Edg\/(\d+)/.test(ua)) browser = "Edge " + RegExp.$1;
+  else if (/Chrome\/(\d+)/.test(ua)) browser = "Chrome " + RegExp.$1;
+  else if (/Firefox\/(\d+)/.test(ua)) browser = "Firefox " + RegExp.$1;
+  else if (/Safari\/(\d+)/.test(ua) && /Version\/(\d+)/.test(ua)) browser = "Safari " + RegExp.$1;
+  if (/Windows NT/.test(ua)) os = "Windows";
+  else if (/Mac OS X/.test(ua)) os = /iPhone|iPad/.test(ua) ? "iOS" : "macOS";
+  else if (/Android/.test(ua)) os = "Android";
+  else if (/Linux/.test(ua)) os = "Linux";
+  return { browser, os };
+}
+
 // --- Session helper (private function, Phase 3 will formalize as middleware) ---
 async function getAuthenticatedUser(c: any): Promise<{ userId: string; sessionId: string } | null> {
   const sessionId = getCookie(c, "session");
@@ -892,6 +907,77 @@ app.post("/auth/change-password", authLimit, async (c) => {
   deleteUserSessions(db, auth.userId, auth.sessionId);
 
   logAuthEvent(db, auth.userId, "password_changed", ip, userAgent);
+
+  return c.json({ success: true });
+});
+
+// --- Session management endpoints ---
+
+// GET /auth/sessions — list active sessions for current user
+app.get("/auth/sessions", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.json({ error: "Not authenticated." }, 401);
+  }
+
+  const sessions = db.query(
+    "SELECT id, ip_address, user_agent, created_at FROM sessions WHERE user_id = ? AND expires_at > datetime('now') ORDER BY created_at DESC"
+  ).all(auth.userId) as Array<{ id: string; ip_address: string; user_agent: string; created_at: string }>;
+
+  const result = sessions.map((s) => {
+    const parsed = parseUserAgent(s.user_agent);
+    return {
+      id: s.id,
+      ip_address: s.ip_address,
+      browser: parsed.browser,
+      os: parsed.os,
+      created_at: s.created_at,
+      is_current: s.id === auth.sessionId,
+    };
+  });
+
+  return c.json(result);
+});
+
+// DELETE /auth/sessions/:id — revoke a specific session (not current)
+app.delete("/auth/sessions/:id", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.json({ error: "Not authenticated." }, 401);
+  }
+
+  const ip = getIp(c);
+  const userAgent = getUserAgent(c);
+  const targetId = c.req.param("id");
+
+  if (targetId === auth.sessionId) {
+    return c.json({ error: "Cannot revoke your current session. Use logout instead." }, 400);
+  }
+
+  // Verify target session belongs to this user
+  const target = db.query("SELECT id FROM sessions WHERE id = ? AND user_id = ?").get(targetId, auth.userId) as { id: string } | null;
+  if (!target) {
+    return c.json({ error: "Session not found." }, 404);
+  }
+
+  deleteSession(db, targetId);
+  logAuthEvent(db, auth.userId, "session_revoked", ip, userAgent, { revoked_session: targetId.slice(0, 8) });
+
+  return c.json({ success: true });
+});
+
+// DELETE /auth/sessions — revoke all other sessions
+app.delete("/auth/sessions", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.json({ error: "Not authenticated." }, 401);
+  }
+
+  const ip = getIp(c);
+  const userAgent = getUserAgent(c);
+
+  deleteUserSessions(db, auth.userId, auth.sessionId);
+  logAuthEvent(db, auth.userId, "all_sessions_revoked", ip, userAgent);
 
   return c.json({ success: true });
 });
