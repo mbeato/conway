@@ -6,9 +6,9 @@ import { resolve, join } from "path";
 import db, { getRevenueByApi, getTotalRevenue, getRequestCount, getErrorRate, getApiRevenue, getRecentRequests, getActiveApis, getDailyRevenue, getDailyRequests, getHourlyRequests, getAuditLog, getWalletSummaries, getAllSpendCaps, upsertSpendCap, deleteSpendCap, getWalletSpend, getSpendCap } from "../../shared/db";
 import { WALLET_ADDRESS } from "../../shared/x402";
 import { rateLimit } from "../../shared/rate-limit";
-import { hashPassword, verifyPassword, createSession, getSession, deleteSession, refreshSessionExpiry, logAuthEvent } from "../../shared/auth";
+import { hashPassword, verifyPassword, createSession, getSession, deleteSession, deleteUserSessions, refreshSessionExpiry, logAuthEvent } from "../../shared/auth";
 import { normalizeEmail, validateEmail, validatePassword } from "../../shared/validation";
-import { sendVerificationCode } from "../../shared/email";
+import { sendVerificationCode, sendPasswordResetCode } from "../../shared/email";
 import { initBalance } from "../../shared/credits";
 import { checkAuthRateLimit } from "../../shared/auth-rate-limit";
 import { isPasswordBreached } from "../../shared/hibp";
@@ -308,6 +308,13 @@ function getUserAgent(c: any): string {
   return c.req.header("user-agent") || "";
 }
 
+// --- Progressive lockout thresholds (highest first, first match wins) ---
+const LOCKOUT_THRESHOLDS = [
+  { failures: 20, duration: '+24 hours' },
+  { failures: 10, duration: '+1 hour' },
+  { failures: 5, duration: '+15 minutes' },
+];
+
 // --- Auth routes (public, before bearerAuth) ---
 const authLimit = rateLimit("dashboard-auth", 60, 60_000);
 
@@ -556,10 +563,10 @@ app.post("/auth/login", authLimit, async (c) => {
 
   const normalized = normalizeEmail(email);
 
-  // Look up user
+  // Look up user (includes lockout fields for progressive lockout)
   const user = db.query(
-    "SELECT id, email, password_hash, email_verified FROM users WHERE email = ?"
-  ).get(normalized) as { id: string; email: string; password_hash: string; email_verified: number } | null;
+    "SELECT id, email, password_hash, email_verified, failed_logins, locked_until FROM users WHERE email = ?"
+  ).get(normalized) as { id: string; email: string; password_hash: string; email_verified: number; failed_logins: number; locked_until: string | null } | null;
 
   if (!user) {
     // Constant-time: verify against dummy hash so timing is identical
@@ -568,10 +575,32 @@ app.post("/auth/login", authLimit, async (c) => {
     return c.json({ error: "Invalid email or password." }, 401);
   }
 
-  // Always verify password (even for unverified users) to maintain constant timing
+  // Check lockout status (but always run verifyPassword for constant-time)
+  const isLocked = user.locked_until && new Date(user.locked_until + "Z") > new Date();
+
+  // Always verify password (even for locked/unverified users) to maintain constant timing
   const passwordValid = await verifyPassword(password, user.password_hash);
 
+  if (isLocked) {
+    // Account locked — return same generic error as wrong password (anti-enumeration)
+    logAuthEvent(db, user.id, "login_failed", ip, userAgent, { reason: "account_locked" });
+    return c.json({ error: "Invalid email or password." }, 401);
+  }
+
   if (!passwordValid) {
+    // Increment failed login counter
+    db.run("UPDATE users SET failed_logins = failed_logins + 1, updated_at = datetime('now') WHERE id = ?", [user.id]);
+
+    // Check if lockout threshold reached
+    const updated = db.query("SELECT failed_logins FROM users WHERE id = ?").get(user.id) as { failed_logins: number };
+    for (const threshold of LOCKOUT_THRESHOLDS) {
+      if (updated.failed_logins >= threshold.failures) {
+        db.run("UPDATE users SET locked_until = datetime('now', ?) WHERE id = ?", [threshold.duration, user.id]);
+        logAuthEvent(db, user.id, "account_locked", ip, userAgent, { failed_logins: updated.failed_logins, duration: threshold.duration });
+        break;
+      }
+    }
+
     logAuthEvent(db, user.id, "login_failed", ip, userAgent, { reason: "wrong_password" });
     return c.json({ error: "Invalid email or password." }, 401);
   }
@@ -584,7 +613,10 @@ app.post("/auth/login", authLimit, async (c) => {
     });
   }
 
-  // Password valid, email verified — create session
+  // Password valid, email verified — reset lockout counter and create session
+  if (user.failed_logins > 0) {
+    db.run("UPDATE users SET failed_logins = 0, locked_until = NULL, updated_at = datetime('now') WHERE id = ?", [user.id]);
+  }
   const sessionId = createSession(db, user.id, ip, userAgent);
 
   setCookie(c, "session", sessionId, {
