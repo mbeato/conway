@@ -38,10 +38,13 @@ export function rateLimit(
   const entries = buckets.get(zone)!;
 
   return async (c, next) => {
-    const ip = c.req.header("x-real-ip");
+    let ip = c.req.header("x-real-ip");
     if (!ip || !isValidIp(ip)) {
-      // No trusted proxy header or invalid format — didn't come through Caddy
-      return c.json({ error: "Direct access not allowed" }, 403);
+      if (process.env.NODE_ENV === "development") {
+        ip = "127.0.0.1";
+      } else {
+        return c.json({ error: "Direct access not allowed" }, 403);
+      }
     }
     const now = Date.now();
     const entry = entries.get(ip);

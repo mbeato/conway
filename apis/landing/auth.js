@@ -360,9 +360,16 @@
 
       var email = document.getElementById("email").value.trim();
       var password = document.getElementById("password").value;
+      var confirmEl = document.getElementById("confirm-password");
+      var confirm = confirmEl ? confirmEl.value : password;
 
       if (!email || !password) {
         showError("Email and password are required.");
+        return;
+      }
+
+      if (password !== confirm) {
+        showError("Passwords do not match.");
         return;
       }
 

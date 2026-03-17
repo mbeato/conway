@@ -458,13 +458,24 @@ app.post("/auth/verify", authLimit, async (c) => {
     return c.json({ error: "Invalid verification code." }, 400);
   }
 
-  // Success: verify email, cleanup codes
+  // Success: verify email, cleanup codes, auto-login
   db.run("UPDATE users SET email_verified = 1, updated_at = datetime('now') WHERE id = ?", [user.id]);
   db.run("DELETE FROM verification_codes WHERE user_id = ? AND purpose = 'email_verification'", [user.id]);
 
-  logAuthEvent(db, user.id, "email_verified", ip, userAgent);
+  // Create session so user is logged in immediately
+  const sessionToken = createSession(db, user.id, ip, userAgent);
+  setCookie(c, "session", sessionToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    path: "/",
+    maxAge: 7 * 24 * 60 * 60,
+  });
 
-  return c.json({ success: true, redirect: "/login" });
+  logAuthEvent(db, user.id, "email_verified", ip, userAgent);
+  logAuthEvent(db, user.id, "login", ip, userAgent);
+
+  return c.json({ success: true, redirect: "/account" });
 });
 
 app.post("/auth/resend-code", authLimit, async (c) => {
