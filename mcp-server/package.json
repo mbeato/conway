@@ -1,6 +1,6 @@
 {
   "name": "@mbeato/apimesh-mcp-server",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "MCP server for APIMesh — 16 x402-payable API tools for AI agents. Web vitals, security headers, SEO audit, email security, email verify, tech stack detection, brand assets, redirect chains, indexability, brand availability, HTTP status, favicon, health checks, robots.txt, plus wallet usage tracking and spend caps. Pay per call with USDC on Base via x402.",
   "mcpName": "io.github.mbeato/apimesh",
   "main": "index.ts",
