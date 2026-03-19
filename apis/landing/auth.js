@@ -1420,6 +1420,84 @@
   }
 
   /* ============================================================
+     Account Overview Page
+     ============================================================ */
+  function initAccountOverview() {
+    var page = document.getElementById("account-overview");
+    if (!page) return;
+
+    fetch("/account/overview", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        /* Balance */
+        var balEl = document.getElementById("overview-balance");
+        if (balEl && data.balance_microdollars !== undefined) {
+          var dollars = (data.balance_microdollars / 100000).toFixed(2);
+          balEl.textContent = "$" + dollars;
+        }
+
+        /* Active keys */
+        var keysEl = document.getElementById("overview-active-keys");
+        if (keysEl) {
+          keysEl.textContent = data.active_key_count + " of " + data.max_keys;
+        }
+
+        /* Alert status */
+        var alertEl = document.getElementById("overview-alert-status");
+        if (alertEl) {
+          if (data.alert_threshold_microdollars) {
+            var threshold = (data.alert_threshold_microdollars / 100000).toFixed(2);
+            alertEl.textContent = "Alert at $" + threshold;
+          } else {
+            alertEl.textContent = "Not configured";
+          }
+        }
+
+        /* Recent transactions */
+        var txnList = document.getElementById("overview-txn-list");
+        if (txnList && data.recent_transactions) {
+          if (data.recent_transactions.length === 0) {
+            txnList.innerHTML = '<div class="overview-txn-empty">No transactions yet</div>';
+            return;
+          }
+
+          txnList.innerHTML = "";
+          data.recent_transactions.forEach(function (txn) {
+            var row = document.createElement("div");
+            row.className = "overview-txn-row";
+
+            var left = document.createElement("div");
+            left.className = "overview-txn-left";
+
+            var badge = document.createElement("span");
+            badge.className = "overview-txn-type " + txn.type;
+            badge.textContent = txn.type;
+
+            var desc = document.createElement("span");
+            desc.className = "overview-txn-desc";
+            desc.textContent = txn.description || txn.api_name || "-";
+
+            left.appendChild(badge);
+            left.appendChild(desc);
+
+            var amount = document.createElement("div");
+            amount.className = "overview-txn-amount " + (txn.amount_microdollars >= 0 ? "positive" : "negative");
+            var dollars = Math.abs(txn.amount_microdollars) / 100000;
+            amount.textContent = (txn.amount_microdollars >= 0 ? "+" : "-") + "$" + dollars.toFixed(2);
+
+            row.appendChild(left);
+            row.appendChild(amount);
+            txnList.appendChild(row);
+          });
+        }
+      })
+      .catch(function () {
+        var balEl = document.getElementById("overview-balance");
+        if (balEl) balEl.textContent = "Error";
+      });
+  }
+
+  /* ============================================================
      Init — run on DOMContentLoaded
      ============================================================ */
   document.addEventListener("DOMContentLoaded", function () {
@@ -1435,5 +1513,6 @@
     initSettings();
     initApiKeys();
     if (document.getElementById("billing-page")) { initBilling(); }
+    if (document.getElementById("account-overview")) { initAccountOverview(); }
   });
 })();
