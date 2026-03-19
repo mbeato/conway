@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { registry } from "./registry";
+import { apiKeyAuth } from "../shared/api-key-auth";
 
 const router = new Hono();
 const PORT = 3001;
@@ -66,6 +67,12 @@ router.all("*", async (c) => {
     return c.json({ error: `Unknown API: ${subdomain}` }, 404);
   }
 
+  // API key auth: check for Bearer sk_live_... and handle credits
+  // Returns Response for auth success/error, or null for x402 fallthrough
+  const authResponse = await apiKeyAuth(c.req.raw, subdomain, subdomainRoutes[subdomain], subApp);
+  if (authResponse) return authResponse;
+
+  // No API key — fall through to existing x402 payment flow
   return subApp.fetch(c.req.raw);
 });
 
