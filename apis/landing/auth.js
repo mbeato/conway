@@ -927,6 +927,499 @@
   }
 
   /* ============================================================
+     API Keys Page Handler (create, list, copy, revoke)
+     ============================================================ */
+  function initApiKeys() {
+    var page = document.getElementById("keys-page");
+    if (!page) return;
+
+    var activeKeyCount = 0;
+    var MAX_KEYS = 5;
+
+    var keyListEl = document.getElementById("key-list");
+    var keyCountEl = document.getElementById("key-count");
+    var createSection = document.getElementById("create-key-section");
+    var newKeyDisplay = document.getElementById("new-key-display");
+    var createBtn = document.getElementById("create-key-btn");
+    var form = document.getElementById("create-key-form");
+    var labelInput = document.getElementById("key-label");
+    var copyBtn = document.getElementById("copy-key-btn");
+    var dismissBtn = document.getElementById("dismiss-key-btn");
+    var newKeyValueEl = document.getElementById("new-key-value");
+
+    /* --- Utility: relative time --- */
+    function timeAgo(dateStr) {
+      var diff = (Date.now() - new Date(dateStr + "Z").getTime()) / 1000;
+      if (diff < 60) return "just now";
+      if (diff < 3600) return Math.floor(diff / 60) + " minutes ago";
+      if (diff < 86400) return Math.floor(diff / 3600) + " hours ago";
+      return Math.floor(diff / 86400) + " days ago";
+    }
+
+    /* --- Utility: message display --- */
+    function showMsg(id, msg) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add("visible");
+    }
+
+    function hideMsg(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = "";
+      el.classList.remove("visible");
+    }
+
+    /* --- Load keys from API --- */
+    function loadKeys() {
+      fetch("/auth/keys")
+        .then(function (res) {
+          if (!res.ok) throw new Error("Failed to load keys");
+          return res.json();
+        })
+        .then(function (data) {
+          renderKeys(data.keys || []);
+        })
+        .catch(function () {
+          keyListEl.innerHTML = '<div class="keys-empty">Failed to load keys.</div>';
+        });
+    }
+
+    /* --- Render key list --- */
+    function renderKeys(keys) {
+      activeKeyCount = 0;
+      keys.forEach(function (k) {
+        if (!k.revoked) activeKeyCount++;
+      });
+
+      /* Update count indicator */
+      keyCountEl.textContent = activeKeyCount + " of " + MAX_KEYS + " keys used";
+
+      /* Enable/disable create button */
+      if (createBtn) {
+        createBtn.disabled = activeKeyCount >= MAX_KEYS;
+      }
+
+      if (!keys.length) {
+        keyListEl.innerHTML = '<div class="keys-empty">No API keys yet. Create one to get started.</div>';
+        return;
+      }
+
+      keyListEl.innerHTML = "";
+      keys.forEach(function (key) {
+        var card = document.createElement("div");
+        card.className = "key-card" + (key.revoked ? " revoked" : "");
+
+        var info = document.createElement("div");
+        info.className = "key-info";
+
+        var topRow = document.createElement("div");
+        topRow.className = "key-top-row";
+
+        var statusDot = document.createElement("div");
+        statusDot.className = "key-status " + (key.revoked ? "revoked" : "active");
+
+        var prefix = document.createElement("span");
+        prefix.className = "key-prefix";
+        prefix.textContent = key.key_prefix + "...";
+
+        var label = document.createElement("span");
+        label.className = "key-label";
+        label.textContent = key.label;
+
+        topRow.appendChild(statusDot);
+        topRow.appendChild(prefix);
+        topRow.appendChild(label);
+
+        var meta = document.createElement("div");
+        meta.className = "key-meta";
+        var lastUsed = key.last_used_at ? timeAgo(key.last_used_at) : "Never";
+        meta.textContent = "Last used: " + lastUsed + " \u00B7 Created: " + timeAgo(key.created_at);
+
+        info.appendChild(topRow);
+        info.appendChild(meta);
+        card.appendChild(info);
+
+        if (!key.revoked) {
+          var actions = document.createElement("div");
+          actions.className = "key-actions";
+          var revokeBtn = document.createElement("button");
+          revokeBtn.className = "btn-revoke";
+          revokeBtn.textContent = "Revoke";
+          revokeBtn.addEventListener("click", function () {
+            revokeKey(key.id);
+          });
+          actions.appendChild(revokeBtn);
+          card.appendChild(actions);
+        } else {
+          var revokedLabel = document.createElement("div");
+          revokedLabel.className = "key-actions";
+          var revokedText = document.createElement("span");
+          revokedText.className = "key-revoked-label";
+          revokedText.textContent = "Revoked";
+          revokedLabel.appendChild(revokedText);
+          card.appendChild(revokedLabel);
+        }
+
+        keyListEl.appendChild(card);
+      });
+    }
+
+    /* --- Create key form handler --- */
+    if (form) {
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        hideMsg("keys-error-msg");
+        hideMsg("keys-success-msg");
+
+        var label = labelInput.value.trim();
+        if (!label) {
+          showMsg("keys-error-msg", "Label is required.");
+          return;
+        }
+        if (label.length > 64) {
+          showMsg("keys-error-msg", "Label must be 64 characters or less.");
+          return;
+        }
+
+        setLoading(createBtn, true);
+
+        fetch("/auth/keys", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ label: label }),
+        })
+          .then(function (res) {
+            return res.json().then(function (data) {
+              return { status: res.status, data: data };
+            });
+          })
+          .then(function (result) {
+            setLoading(createBtn, false, "Create Key");
+            if (result.data.success && result.data.key) {
+              /* Show one-time key display */
+              newKeyValueEl.textContent = result.data.key.plaintext;
+              newKeyDisplay.classList.add("visible");
+              createSection.style.display = "none";
+              loadKeys();
+            } else {
+              showMsg("keys-error-msg", result.data.error || "Failed to create key.");
+            }
+          })
+          .catch(function () {
+            setLoading(createBtn, false, "Create Key");
+            showMsg("keys-error-msg", "Network error. Please try again.");
+          });
+      });
+    }
+
+    /* --- Copy button handler --- */
+    if (copyBtn) {
+      copyBtn.addEventListener("click", function () {
+        var keyText = newKeyValueEl.textContent;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(keyText).then(function () {
+            copyBtn.textContent = "Copied!";
+            setTimeout(function () { copyBtn.textContent = "Copy"; }, 2000);
+          }).catch(function () {
+            fallbackCopy(keyText);
+          });
+        } else {
+          fallbackCopy(keyText);
+        }
+      });
+    }
+
+    function fallbackCopy(text) {
+      var textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+        copyBtn.textContent = "Copied!";
+        setTimeout(function () { copyBtn.textContent = "Copy"; }, 2000);
+      } catch (e) {
+        copyBtn.textContent = "Failed";
+        setTimeout(function () { copyBtn.textContent = "Copy"; }, 2000);
+      }
+      document.body.removeChild(textarea);
+    }
+
+    /* --- Dismiss button handler --- */
+    if (dismissBtn) {
+      dismissBtn.addEventListener("click", function () {
+        newKeyDisplay.classList.remove("visible");
+        newKeyValueEl.textContent = "";
+        createSection.style.display = "";
+        labelInput.value = "";
+        loadKeys();
+      });
+    }
+
+    /* --- Revoke key handler --- */
+    function revokeKey(keyId) {
+      if (!confirm("Revoke this API key? This cannot be undone. Any applications using this key will stop working.")) return;
+
+      hideMsg("keys-error-msg");
+      hideMsg("keys-success-msg");
+
+      fetch("/auth/keys/" + encodeURIComponent(keyId), { method: "DELETE" })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { status: res.status, data: data };
+          });
+        })
+        .then(function (result) {
+          if (result.data.success) {
+            showMsg("keys-success-msg", "API key revoked.");
+            loadKeys();
+          } else {
+            showMsg("keys-error-msg", result.data.error || "Failed to revoke key.");
+          }
+        })
+        .catch(function () {
+          showMsg("keys-error-msg", "Network error. Please try again.");
+        });
+    }
+
+    /* --- Initial load --- */
+    loadKeys();
+  }
+
+  /* ============================================================
+     Billing Page
+     ============================================================ */
+  function initBilling() {
+    // Load balance
+    fetch("/billing/balance", { credentials: "same-origin" })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var el = document.getElementById("balance-display");
+        if (el && data.balance_microdollars !== undefined) {
+          var dollars = (data.balance_microdollars / 100000).toFixed(2);
+          el.textContent = "$" + dollars;
+        }
+      })
+      .catch(function () {
+        var el = document.getElementById("balance-display");
+        if (el) el.textContent = "Error loading balance";
+      });
+
+    // Check for success/cancel feedback from Stripe redirect
+    var billingStatus = getParam("billing");
+    if (billingStatus === "success") {
+      showSuccess("Payment successful! Credits have been added to your account.");
+    } else if (billingStatus === "cancelled") {
+      showError("Payment was cancelled. No charges were made.");
+    }
+
+    // Buy button handlers
+    var buyButtons = document.querySelectorAll(".btn-buy[data-tier]");
+    buyButtons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var tier = btn.getAttribute("data-tier");
+        setLoading(btn, true);
+        hideError();
+
+        fetch("/billing/checkout", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tier: tier }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.checkout_url) {
+              window.location.href = data.checkout_url;
+            } else {
+              showError(data.error || "Failed to start checkout");
+              setLoading(btn, false);
+            }
+          })
+          .catch(function () {
+            showError("Network error. Please try again.");
+            setLoading(btn, false);
+          });
+      });
+    });
+
+    /* --- Transaction History --- */
+    var txnBody = document.getElementById("txn-body");
+    var loadMoreBtn = document.getElementById("load-more-btn");
+    var txnOffset = 0;
+    var TXN_LIMIT = 20;
+
+    function formatDate(dateStr) {
+      var d = new Date(dateStr + "Z");
+      var month = String(d.getMonth() + 1).padStart(2, "0");
+      var day = String(d.getDate()).padStart(2, "0");
+      var hours = String(d.getHours()).padStart(2, "0");
+      var mins = String(d.getMinutes()).padStart(2, "0");
+      return d.getFullYear() + "-" + month + "-" + day + " " + hours + ":" + mins;
+    }
+
+    function formatAmount(microdollars) {
+      var dollars = Math.abs(microdollars) / 100000;
+      var sign = microdollars >= 0 ? "+" : "-";
+      return sign + "$" + dollars.toFixed(2);
+    }
+
+    function loadTransactions(append) {
+      fetch("/billing/transactions?limit=" + TXN_LIMIT + "&offset=" + txnOffset, { credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var txns = data.transactions || [];
+          if (!append) txnBody.innerHTML = "";
+
+          if (txns.length === 0 && txnOffset === 0) {
+            txnBody.innerHTML = '<tr><td colspan="4" class="txn-empty">No transactions yet.</td></tr>';
+            loadMoreBtn.style.display = "none";
+            return;
+          }
+
+          txns.forEach(function (txn) {
+            var tr = document.createElement("tr");
+
+            var tdType = document.createElement("td");
+            var badge = document.createElement("span");
+            badge.className = "txn-type " + txn.type;
+            badge.textContent = txn.type;
+            tdType.appendChild(badge);
+
+            var tdDesc = document.createElement("td");
+            tdDesc.className = "txn-desc";
+            tdDesc.textContent = txn.description || txn.api_name || "-";
+            tdDesc.title = txn.description || "";
+
+            var tdAmount = document.createElement("td");
+            tdAmount.className = "txn-amount " + (txn.amount_microdollars >= 0 ? "positive" : "negative");
+            tdAmount.textContent = formatAmount(txn.amount_microdollars);
+
+            var tdDate = document.createElement("td");
+            tdDate.className = "txn-date";
+            tdDate.textContent = formatDate(txn.created_at);
+
+            tr.appendChild(tdType);
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdAmount);
+            tr.appendChild(tdDate);
+            txnBody.appendChild(tr);
+          });
+
+          loadMoreBtn.style.display = txns.length < TXN_LIMIT ? "none" : "block";
+        })
+        .catch(function () {
+          if (!append) {
+            txnBody.innerHTML = '<tr><td colspan="4" class="txn-empty">Failed to load transactions.</td></tr>';
+          }
+        });
+    }
+
+    if (txnBody) {
+      loadTransactions(false);
+    }
+
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener("click", function () {
+        txnOffset += TXN_LIMIT;
+        loadMoreBtn.disabled = true;
+        loadTransactions(true);
+        loadMoreBtn.disabled = false;
+      });
+    }
+
+    /* --- Alert Threshold --- */
+    var alertInput = document.getElementById("alert-threshold-input");
+    var setAlertBtn = document.getElementById("set-alert-btn");
+    var clearAlertBtn = document.getElementById("clear-alert-btn");
+    var alertStatus = document.getElementById("alert-status");
+
+    function loadAlertThreshold() {
+      fetch("/billing/alert-threshold", { credentials: "same-origin" })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.threshold_microdollars) {
+            var dollars = (data.threshold_microdollars / 100000).toFixed(2);
+            alertInput.value = dollars;
+            alertStatus.textContent = "Alert enabled: you will be emailed when balance drops below $" + dollars;
+          } else {
+            alertInput.value = "";
+            alertStatus.textContent = "Alerts disabled. Enter a dollar amount to enable.";
+          }
+        })
+        .catch(function () {
+          alertStatus.textContent = "Failed to load alert settings.";
+        });
+    }
+
+    if (alertInput && setAlertBtn) {
+      loadAlertThreshold();
+
+      setAlertBtn.addEventListener("click", function () {
+        var val = parseFloat(alertInput.value);
+        if (isNaN(val) || val <= 0) {
+          alertStatus.textContent = "Enter a valid dollar amount (e.g. 5.00).";
+          return;
+        }
+
+        var microdollars = Math.round(val * 100000);
+        setAlertBtn.disabled = true;
+
+        fetch("/billing/alert-threshold", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ threshold_microdollars: microdollars }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            setAlertBtn.disabled = false;
+            if (data.success) {
+              alertStatus.textContent = "Alert enabled: you will be emailed when balance drops below $" + val.toFixed(2);
+            } else {
+              alertStatus.textContent = data.error || "Failed to set alert.";
+            }
+          })
+          .catch(function () {
+            setAlertBtn.disabled = false;
+            alertStatus.textContent = "Network error. Please try again.";
+          });
+      });
+    }
+
+    if (clearAlertBtn) {
+      clearAlertBtn.addEventListener("click", function () {
+        clearAlertBtn.disabled = true;
+
+        fetch("/billing/alert-threshold", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ threshold_microdollars: null }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            clearAlertBtn.disabled = false;
+            if (data.success) {
+              alertInput.value = "";
+              alertStatus.textContent = "Alerts disabled. Enter a dollar amount to enable.";
+            } else {
+              alertStatus.textContent = data.error || "Failed to disable alert.";
+            }
+          })
+          .catch(function () {
+            clearAlertBtn.disabled = false;
+            alertStatus.textContent = "Network error. Please try again.";
+          });
+      });
+    }
+  }
+
+  /* ============================================================
      Init — run on DOMContentLoaded
      ============================================================ */
   document.addEventListener("DOMContentLoaded", function () {
@@ -940,5 +1433,7 @@
     initVerifyEmail();
     initForgotPassword();
     initSettings();
+    initApiKeys();
+    if (document.getElementById("billing-page")) { initBilling(); }
   });
 })();
