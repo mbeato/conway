@@ -54,6 +54,17 @@ apimesh.xyz {
         }
     }
 
+    # Auth, account, and billing pages — no caching of sensitive content
+    @auth_paths path /auth/* /signup /login /verify /forgot-password /account /account/* /billing/*
+    handle @auth_paths {
+        import dashboard_headers
+        header Cache-Control "no-store"
+        reverse_proxy localhost:3000 {
+            header_up X-Real-IP {remote_host}
+            header_up -X-Forwarded-For
+        }
+    }
+
     handle {
         import security_headers
         reverse_proxy localhost:3000 {
@@ -89,6 +100,7 @@ mcp.apimesh.xyz {
     request_body {
         max_size 16KB
     }
+    # Authorization header passes through automatically (API key auth)
     reverse_proxy localhost:3001 {
         header_up X-Real-IP {remote_host}
         header_up -X-Forwarded-For
