@@ -1,6 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
+// API key for authenticated requests (optional — falls back to x402/free previews)
+const APIMESH_API_KEY = process.env.APIMESH_API_KEY || "";
+if (APIMESH_API_KEY) {
+  console.log("[mcp] API key configured — requests will use Bearer auth");
+}
+
 // ---------------------------------------------------------------------------
 // Helper: make an HTTP request and return a structured MCP tool result.
 // Handles 402 (payment required) by returning the payment details.
@@ -10,7 +16,23 @@ async function callApi(
   options?: RequestInit,
 ): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
   try {
-    const res = await fetch(url, options);
+    // Build headers: preserve caller headers + inject API key if configured
+    const headers: Record<string, string> = {};
+    if (options?.headers) {
+      const h = options.headers;
+      if (h instanceof Headers) {
+        h.forEach((v, k) => { headers[k] = v; });
+      } else if (Array.isArray(h)) {
+        h.forEach(([k, v]) => { headers[k] = v; });
+      } else {
+        Object.assign(headers, h);
+      }
+    }
+    if (APIMESH_API_KEY) {
+      headers["Authorization"] = `Bearer ${APIMESH_API_KEY}`;
+    }
+
+    const res = await fetch(url, { ...options, headers });
     const body = await res.text();
 
     if (res.status === 402) {
@@ -87,7 +109,7 @@ function qs(params: Record<string, string | number | undefined>): string {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "apimesh",
-    version: "1.4.0",
+    version: "1.5.0",
   });
 
   server.tool(
