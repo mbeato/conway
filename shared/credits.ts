@@ -178,6 +178,7 @@ export function getTransactions(
   offset: number = 0
 ): CreditTransaction[] {
   return db.query(
-    `SELECT * FROM credit_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
+    `SELECT id, user_id, type, amount_microdollars, description, api_key_id, api_name, created_at
+     FROM credit_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?`
   ).all(userId, limit, offset) as CreditTransaction[];
 }

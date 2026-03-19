@@ -67,12 +67,19 @@ export async function apiKeyAuth(
 
   if (!isPaid) {
     // Free endpoint (preview, health, info) — forward without deduction
-    // Add internal auth header so payment middleware skips if encountered
-    const modifiedReq = new Request(req, {
-      headers: new Headers(req.headers),
+    const forwardHeaders = new Headers(req.headers);
+    forwardHeaders.delete("authorization"); // sub-app doesn't need the raw key
+    forwardHeaders.set("X-APIMesh-Internal", INTERNAL_AUTH_SECRET);
+    const modifiedReq = new Request(req, { headers: forwardHeaders });
+    const response = await subApp.fetch(modifiedReq);
+    // Strip internal header from response
+    const cleanResponse = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: new Headers(response.headers),
     });
-    modifiedReq.headers.set("X-APIMesh-Internal", INTERNAL_AUTH_SECRET);
-    return subApp.fetch(modifiedReq);
+    cleanResponse.headers.delete("x-apimesh-internal");
+    return cleanResponse;
   }
 
   // 4. Look up pricing
@@ -100,19 +107,20 @@ export async function apiKeyAuth(
   }
 
   // 6. Forward request to sub-app with internal auth bypass header
-  const modifiedReq = new Request(req, {
-    headers: new Headers(req.headers),
-  });
-  modifiedReq.headers.set("X-APIMesh-Internal", INTERNAL_AUTH_SECRET);
+  const forwardHeaders = new Headers(req.headers);
+  forwardHeaders.delete("authorization"); // sub-app doesn't need the raw key
+  forwardHeaders.set("X-APIMesh-Internal", INTERNAL_AUTH_SECRET);
+  const modifiedReq = new Request(req, { headers: forwardHeaders });
 
   const response = await subApp.fetch(modifiedReq);
 
-  // 7. Add X-Credits-Remaining header to response
+  // 7. Add X-Credits-Remaining header to response, strip internal header
   const newResponse = new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
     headers: new Headers(response.headers),
   });
+  newResponse.headers.delete("x-apimesh-internal");
   newResponse.headers.set("X-Credits-Remaining", String(result.newBalance));
   newResponse.headers.set("X-Auth-Method", "api-key");
 

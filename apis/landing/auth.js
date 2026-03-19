@@ -261,7 +261,7 @@
 
       fetch("/auth/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
         body: JSON.stringify({ email: email, code: code }),
       })
         .then(function (res) {
@@ -305,7 +305,7 @@
 
       fetch("/auth/resend-code", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
         body: JSON.stringify({ email: email }),
       })
         .then(function (res) {
@@ -377,7 +377,7 @@
 
       fetch("/auth/signup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
         body: JSON.stringify({ email: email, password: password }),
       })
         .then(function (res) {
@@ -426,7 +426,7 @@
 
       fetch("/auth/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
         body: JSON.stringify({ email: email, password: password }),
       })
         .then(function (res) {
@@ -460,7 +460,7 @@
     if (!btn) return;
 
     btn.addEventListener("click", function () {
-      fetch("/auth/logout", { method: "POST" })
+      fetch("/auth/logout", { method: "POST", headers: { "X-Requested-With": "XMLHttpRequest" } })
         .then(function () {
           window.location.href = "/login";
         })
@@ -510,7 +510,7 @@
 
       fetch("/auth/forgot-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
         body: JSON.stringify({ email: email }),
       })
         .then(function (res) {
@@ -635,7 +635,7 @@
 
       fetch("/auth/reset-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
         body: JSON.stringify({ email: storedEmail, code: code, password: password }),
       })
         .then(function (res) {
@@ -761,7 +761,7 @@
       hideMsg("sessions-error-msg");
       hideMsg("sessions-success-msg");
 
-      fetch("/auth/sessions/" + encodeURIComponent(sessionId), { method: "DELETE" })
+      fetch("/auth/sessions/" + encodeURIComponent(sessionId), { method: "DELETE", headers: { "X-Requested-With": "XMLHttpRequest" } })
         .then(function (res) {
           return res.json().then(function (data) {
             return { status: res.status, data: data };
@@ -790,7 +790,7 @@
         hideMsg("sessions-success-msg");
         revokeAllBtn.disabled = true;
 
-        fetch("/auth/sessions", { method: "DELETE" })
+        fetch("/auth/sessions", { method: "DELETE", headers: { "X-Requested-With": "XMLHttpRequest" } })
           .then(function (res) {
             return res.json().then(function (data) {
               return { status: res.status, data: data };
@@ -841,7 +841,7 @@
 
         fetch("/auth/change-password", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
           body: JSON.stringify({ currentPassword: currentPassword, newPassword: newPassword }),
         })
           .then(function (res) {
@@ -912,7 +912,7 @@
 
         logoutAllBtn.disabled = true;
 
-        fetch("/auth/logout", { method: "POST" })
+        fetch("/auth/logout", { method: "POST", headers: { "X-Requested-With": "XMLHttpRequest" } })
           .then(function () {
             window.location.href = "/login";
           })
@@ -1087,7 +1087,7 @@
 
         fetch("/auth/keys", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
           body: JSON.stringify({ label: label }),
         })
           .then(function (res) {
@@ -1167,7 +1167,7 @@
       hideMsg("keys-error-msg");
       hideMsg("keys-success-msg");
 
-      fetch("/auth/keys/" + encodeURIComponent(keyId), { method: "DELETE" })
+      fetch("/auth/keys/" + encodeURIComponent(keyId), { method: "DELETE", headers: { "X-Requested-With": "XMLHttpRequest" } })
         .then(function (res) {
           return res.json().then(function (data) {
             return { status: res.status, data: data };
@@ -1228,13 +1228,24 @@
         fetch("/billing/checkout", {
           method: "POST",
           credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
           body: JSON.stringify({ tier: tier }),
         })
           .then(function (r) { return r.json(); })
           .then(function (data) {
             if (data.checkout_url) {
-              window.location.href = data.checkout_url;
+              try {
+                var parsed = new URL(data.checkout_url);
+                if (parsed.protocol !== "https:" || parsed.hostname !== "checkout.stripe.com") {
+                  showError("Invalid checkout URL. Please try again.");
+                  setLoading(btn, false);
+                  return;
+                }
+                window.location.href = data.checkout_url;
+              } catch (e) {
+                showError("Invalid checkout URL. Please try again.");
+                setLoading(btn, false);
+              }
             } else {
               showError(data.error || "Failed to start checkout");
               setLoading(btn, false);
@@ -1311,11 +1322,13 @@
           });
 
           loadMoreBtn.style.display = txns.length < TXN_LIMIT ? "none" : "block";
+          if (loadMoreBtn) loadMoreBtn.disabled = false;
         })
         .catch(function () {
           if (!append) {
             txnBody.innerHTML = '<tr><td colspan="4" class="txn-empty">Failed to load transactions.</td></tr>';
           }
+          if (loadMoreBtn) loadMoreBtn.disabled = false;
         });
     }
 
@@ -1325,10 +1338,10 @@
 
     if (loadMoreBtn) {
       loadMoreBtn.addEventListener("click", function () {
+        if (loadMoreBtn.disabled) return;
         txnOffset += TXN_LIMIT;
         loadMoreBtn.disabled = true;
         loadTransactions(true);
-        loadMoreBtn.disabled = false;
       });
     }
 
@@ -1372,7 +1385,7 @@
         fetch("/billing/alert-threshold", {
           method: "POST",
           credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
           body: JSON.stringify({ threshold_microdollars: microdollars }),
         })
           .then(function (r) { return r.json(); })
@@ -1398,7 +1411,7 @@
         fetch("/billing/alert-threshold", {
           method: "POST",
           credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
           body: JSON.stringify({ threshold_microdollars: null }),
         })
           .then(function (r) { return r.json(); })

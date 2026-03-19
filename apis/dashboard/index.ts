@@ -38,7 +38,7 @@ const publicLimit = rateLimit("dashboard-public", 120, 60_000);
 app.get("/health", (c) => c.json({ status: "ok" }));
 
 // --- Stripe webhook (MUST be early — needs raw body, no CSP, no auth) ---
-app.post("/billing/webhook", async (c) => {
+app.post("/billing/webhook", webhookLimit, async (c) => {
   if (!STRIPE_WEBHOOK_SECRET) {
     console.error("[billing] Webhook received but STRIPE_WEBHOOK_SECRET not configured");
     return c.json({ error: "Webhook not configured" }, 500);
@@ -74,13 +74,15 @@ app.post("/billing/webhook", async (c) => {
 
     const userId = session.metadata?.user_id;
     const tier = session.metadata?.tier;
-    const creditsAmount = parseInt(session.metadata?.credits_amount || "0", 10);
     const paymentIntent = session.payment_intent;
 
-    if (!userId || !creditsAmount || !paymentIntent) {
-      console.error("[billing] Webhook missing required metadata:", { userId, tier, creditsAmount, paymentIntent });
+    // Derive credits from server-side tier config, not from metadata
+    const tierConfig = tier ? CREDIT_TIERS[tier] : null;
+    if (!userId || !tierConfig || !paymentIntent) {
+      console.error("[billing] Webhook missing required metadata:", { userId, tier, paymentIntent });
       return c.json({ received: true }, 200);
     }
+    const creditsAmount = tierConfig.credits;
 
     // Verify user exists
     const user = db.query("SELECT id FROM users WHERE id = ?").get(userId) as { id: string } | null;
@@ -394,7 +396,7 @@ async function hashCode(code: string): Promise<string> {
 }
 
 function getIp(c: any): string {
-  return c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
+  return c.req.header("x-real-ip") || "127.0.0.1";
 }
 
 function getUserAgent(c: any): string {
@@ -408,10 +410,18 @@ const LOCKOUT_THRESHOLDS = [
   { failures: 5, duration: '+15 minutes' },
 ];
 
+// --- CSRF check: all mutating requests must come from our own JS ---
+function csrfCheck(c: any): boolean {
+  const xrw = c.req.header("x-requested-with");
+  return xrw?.toLowerCase() === "xmlhttprequest";
+}
+
 // --- Auth routes (public, before bearerAuth) ---
 const authLimit = rateLimit("dashboard-auth", 60, 60_000);
+const webhookLimit = rateLimit("billing-webhook", 30, 60_000);
 
 app.post("/auth/signup", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
 
@@ -500,6 +510,7 @@ app.post("/auth/signup", authLimit, async (c) => {
 });
 
 app.post("/auth/verify", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   let body: any;
   try {
     body = await c.req.json();
@@ -579,6 +590,7 @@ app.post("/auth/verify", authLimit, async (c) => {
 });
 
 app.post("/auth/resend-code", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   let body: any;
   try {
     body = await c.req.json();
@@ -632,6 +644,7 @@ app.post("/auth/resend-code", authLimit, async (c) => {
 
 // --- Login route ---
 app.post("/auth/login", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
 
@@ -727,6 +740,7 @@ app.post("/auth/login", authLimit, async (c) => {
 
 // --- Logout route ---
 app.post("/auth/logout", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
   const sessionId = getCookie(c, "session");
@@ -739,7 +753,7 @@ app.post("/auth/logout", authLimit, async (c) => {
     }
   }
 
-  deleteCookie(c, "session", { path: "/" });
+  deleteCookie(c, "session", { path: "/", httpOnly: true, secure: true, sameSite: "Strict" });
 
   return c.json({ success: true, redirect: "/login" });
 });
@@ -771,6 +785,7 @@ async function getAuthenticatedUser(c: any): Promise<{ userId: string; sessionId
 
 // --- Forgot Password route ---
 app.post("/auth/forgot-password", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
 
@@ -834,6 +849,7 @@ app.post("/auth/forgot-password", authLimit, async (c) => {
 
 // --- Reset Password route ---
 app.post("/auth/reset-password", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
 
@@ -856,7 +872,13 @@ app.post("/auth/reset-password", authLimit, async (c) => {
     return c.json({ error: "Too many requests. Try again later." }, 429);
   }
 
+  // Rate limit by email
   const normalized = normalizeEmail(email);
+  const rlEmail = checkAuthRateLimit(db, "password-reset-email", normalized);
+  if (!rlEmail.allowed) {
+    c.header("Retry-After", String(rlEmail.retryAfter));
+    return c.json({ error: "Too many requests. Try again later." }, 429);
+  }
 
   // Look up user
   const user = db.query("SELECT id, failed_logins FROM users WHERE email = ?").get(normalized) as { id: string; failed_logins: number } | null;
@@ -928,6 +950,7 @@ app.post("/auth/reset-password", authLimit, async (c) => {
 
 // --- Change Password route (session required) ---
 app.post("/auth/change-password", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
 
@@ -1017,6 +1040,7 @@ app.get("/auth/sessions", authLimit, async (c) => {
 
 // DELETE /auth/sessions/:id — revoke a specific session (not current)
 app.delete("/auth/sessions/:id", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
     return c.json({ error: "Not authenticated." }, 401);
@@ -1044,6 +1068,7 @@ app.delete("/auth/sessions/:id", authLimit, async (c) => {
 
 // DELETE /auth/sessions — revoke all other sessions
 app.delete("/auth/sessions", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
     return c.json({ error: "Not authenticated." }, 401);
@@ -1062,6 +1087,7 @@ app.delete("/auth/sessions", authLimit, async (c) => {
 
 // POST /auth/keys — create a new API key
 app.post("/auth/keys", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
     return c.json({ error: "Not authenticated." }, 401);
@@ -1069,6 +1095,13 @@ app.post("/auth/keys", authLimit, async (c) => {
 
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
+
+  // Per-user key ops rate limit
+  const rlKeyOps = checkAuthRateLimit(db, "key-ops", auth.userId);
+  if (!rlKeyOps.allowed) {
+    c.header("Retry-After", String(rlKeyOps.retryAfter));
+    return c.json({ error: "Too many key operations. Try again later." }, 429);
+  }
 
   let body: any;
   try {
@@ -1113,6 +1146,7 @@ app.get("/auth/keys", authLimit, async (c) => {
 
 // DELETE /auth/keys/:id — revoke an API key
 app.delete("/auth/keys/:id", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
     return c.json({ error: "Not authenticated." }, 401);
@@ -1120,6 +1154,14 @@ app.delete("/auth/keys/:id", authLimit, async (c) => {
 
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
+
+  // Per-user key ops rate limit
+  const rlKeyOps = checkAuthRateLimit(db, "key-ops", auth.userId);
+  if (!rlKeyOps.allowed) {
+    c.header("Retry-After", String(rlKeyOps.retryAfter));
+    return c.json({ error: "Too many key operations. Try again later." }, 429);
+  }
+
   const keyId = c.req.param("id");
 
   const revoked = revokeApiKey(db, keyId, auth.userId);
@@ -1134,6 +1176,7 @@ app.delete("/auth/keys/:id", authLimit, async (c) => {
 
 // --- Billing routes (session-protected) ---
 app.post("/billing/checkout", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const auth = await getAuthenticatedUser(c);
   if (!auth) return c.json({ error: "Unauthorized" }, 401);
 
@@ -1209,6 +1252,7 @@ app.get("/billing/alert-threshold", authLimit, async (c) => {
 
 // --- Alert threshold (set/clear) ---
 app.post("/billing/alert-threshold", authLimit, async (c) => {
+  if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const auth = await getAuthenticatedUser(c);
   if (!auth) return c.json({ error: "Unauthorized" }, 401);
 
@@ -1241,7 +1285,7 @@ app.get("/account/overview", authLimit, async (c) => {
 
   const balance = getBalance(db, auth.userId);
   const keys = getUserKeys(db, auth.userId);
-  const activeKeys = keys.filter((k: any) => !k.revoked_at).length;
+  const activeKeys = keys.filter((k: any) => !k.revoked).length;
   const recentTransactions = getTransactions(db, auth.userId, 5, 0);
 
   const alertRow = db.query(
@@ -1259,7 +1303,7 @@ app.get("/account/overview", authLimit, async (c) => {
 });
 
 // --- Billing page (session-protected) ---
-app.get("/account/billing", publicLimit, async (c) => {
+app.get("/account/billing", authLimit, async (c) => {
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
     return c.redirect("/login", 302);
@@ -1281,7 +1325,7 @@ app.get("/account/billing", publicLimit, async (c) => {
 });
 
 // --- Settings page (session-protected) ---
-app.get("/account/settings", publicLimit, async (c) => {
+app.get("/account/settings", authLimit, async (c) => {
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
     return c.redirect("/login", 302);
@@ -1303,7 +1347,7 @@ app.get("/account/settings", publicLimit, async (c) => {
 });
 
 // --- API Keys management page (session-protected) ---
-app.get("/account/keys", publicLimit, async (c) => {
+app.get("/account/keys", authLimit, async (c) => {
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
     return c.redirect("/login", 302);
@@ -1325,7 +1369,7 @@ app.get("/account/keys", publicLimit, async (c) => {
 });
 
 // --- Account page (session-protected) ---
-app.get("/account", publicLimit, async (c) => {
+app.get("/account", authLimit, async (c) => {
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
     return c.redirect("/login", 302);

@@ -104,5 +104,6 @@ mcp.apimesh.xyz {
     reverse_proxy localhost:3001 {
         header_up X-Real-IP {remote_host}
         header_up -X-Forwarded-For
+        header_up -X-APIMesh-Internal
     }
 }
