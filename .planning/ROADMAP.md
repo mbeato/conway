@@ -134,9 +134,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01: API key auth middleware module and x402 payment bypass (shared/api-key-auth.ts, shared/x402.ts)
-- [ ] 07-02: Router integration and request logging (apis/router.ts, shared/db.ts)
-- [ ] 07-03: Caddy route configuration for auth/account/billing paths (caddy/Caddyfile)
+- [x] 07-01: API key auth middleware module and x402 payment bypass (shared/api-key-auth.ts, shared/x402.ts)
+- [x] 07-02: Router integration and request logging (apis/router.ts, shared/db.ts)
+- [x] 07-03: Caddy route configuration for auth/account/billing paths (caddy/Caddyfile)
 
 ### Phase 8: MCP & Landing Page
 **Goal**: MCP server supports API key auth and landing page drives signups
@@ -166,5 +166,5 @@ Note: Phases 3, 4, and 5 all depend on Phase 2 but are independent of each other
 | 4. API Keys | 2/2 | Complete | 2026-03-18 |
 | 5. Stripe Billing | 3/3 | Complete | 2026-03-18 |
 | 6. Credits & Account Dashboard | 0/2 | Not started | - |
-| 7. API Key Auth Middleware | 0/3 | Not started | - |
+| 7. API Key Auth Middleware | 3/3 | Complete | 2026-03-18 |
 | 8. MCP & Landing Page | 0/2 | Planned | - |

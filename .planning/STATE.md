@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-last_updated: "2026-03-18T00:00:00.000Z"
+status: unknown
+last_updated: "2026-03-19T00:31:50.513Z"
 progress:
   total_phases: 8
-  completed_phases: 5
-  total_plans: 16
-  completed_plans: 15
+  completed_phases: 7
+  total_plans: 21
+  completed_plans: 19
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-15)
 
 **Core value:** Developers and AI agents can access web analysis APIs through a single account with one credit pool, paying with credit card or crypto.
-**Current focus:** Phase 6: Credits Dashboard (executing plan 2 of 2)
+**Current focus:** Phase 7 complete, pending verification
 
 ## Current Position
 
-Phase: 6 of 8 — Phase 6 executing
-Plan: 1 of 2 in Phase 6 (06-01 complete, 06-02 next)
-Status: Phase 6 Executing
-Last activity: 2026-03-18 — Completed 06-01 (transaction history, alert schema, billing UI)
+Phase: 7 of 8 — Phase 7 COMPLETE, pending verification
+Plan: 3 of 3 in Phase 7 (all plans complete)
+Status: Phase 7 Complete
+Last activity: 2026-03-18 — Completed 07-03 (Caddy auth/account/billing routes)
 
-Progress: [██████████████░░] 75%
+Progress: [███████████████████░] 90%
 
 ## Performance Metrics
 
@@ -45,10 +45,11 @@ Progress: [██████████████░░] 75%
 | 03-auth-hardening-sessions | 3 | 16min | 5min |
 | 04-api-keys | 2 | 7min | 3.5min |
 | 05-stripe-billing | 3 | ~12min | ~4min |
+| 07-api-key-auth-middleware | 3 | ~6min | ~2min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (3min), 04-02 (4min), 05-01 (~4min), 05-02 (~4min), 05-03 (~4min)
-- Trend: stable
+- Last 5 plans: 05-02 (~4min), 05-03 (~4min), 07-01 (3min), 07-02 (2min), 07-03 (1min)
+- Trend: accelerating
 
 *Updated after each plan completion*
 
@@ -101,6 +102,12 @@ Recent decisions affecting current work:
 - 05-02: Always returns 200 to Stripe to prevent unnecessary retries
 - 05-03: Billing page max-width 720px for 2-column tier grid layout
 - 05-03: Balance displayed as dollars (microdollars / 100000)
+- 07-01: INTERNAL_AUTH_SECRET generated in x402.ts (not api-key-auth.ts) to avoid circular imports
+- 07-01: Null return from apiKeyAuth() signals x402 fallthrough (no breaking changes)
+- 07-01: Non-sk_live_ Bearer tokens return null (fall through) to avoid breaking other auth flows
+- 07-02: apiKeyAuth() called before subApp.fetch() in catch-all — single insertion point for all 21 APIs
+- 07-02: logRequest() userId/apiKeyId params are optional for backward compatibility
+- 07-03: No changes to *.apimesh.xyz block needed — Caddy already passes Authorization header
 
 ### Pending Todos
 
@@ -116,5 +123,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Phase 7 planned. Ready for execution (07-01: Auth middleware module + x402 bypass, 07-02: Router integration + request logging, 07-03: Caddy configuration).
-Resume file: .planning/phases/07-api-key-auth-middleware/07-01-PLAN.md (execute next)
+Stopped at: Phase 7 complete. All 3 plans executed (07-01: Auth middleware + x402 bypass, 07-02: Router integration, 07-03: Caddy config). Pending verification.
+Resume file: .planning/phases/08-mcp-landing-page/08-01-PLAN.md (next phase)
