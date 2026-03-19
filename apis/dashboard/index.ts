@@ -9,9 +9,11 @@ import { rateLimit } from "../../shared/rate-limit";
 import { hashPassword, verifyPassword, createSession, getSession, deleteSession, deleteUserSessions, refreshSessionExpiry, logAuthEvent } from "../../shared/auth";
 import { normalizeEmail, validateEmail, validatePassword } from "../../shared/validation";
 import { sendVerificationCode, sendPasswordResetCode } from "../../shared/email";
-import { initBalance } from "../../shared/credits";
+import { initBalance, getBalance, addCredits, getTransactions } from "../../shared/credits";
+import { createCheckoutSession, CREDIT_TIERS, verifyWebhookSignature, STRIPE_WEBHOOK_SECRET } from "../../shared/stripe";
 import { checkAuthRateLimit } from "../../shared/auth-rate-limit";
 import { isPasswordBreached } from "../../shared/hibp";
+import { createApiKey, getUserKeys, revokeApiKey } from "../../shared/api-key";
 
 const app = new Hono();
 const PORT = 3000;
@@ -34,6 +36,80 @@ const publicLimit = rateLimit("dashboard-public", 120, 60_000);
 
 // Health check — no rate limit, must work from localhost monitoring
 app.get("/health", (c) => c.json({ status: "ok" }));
+
+// --- Stripe webhook (MUST be early — needs raw body, no CSP, no auth) ---
+app.post("/billing/webhook", async (c) => {
+  if (!STRIPE_WEBHOOK_SECRET) {
+    console.error("[billing] Webhook received but STRIPE_WEBHOOK_SECRET not configured");
+    return c.json({ error: "Webhook not configured" }, 500);
+  }
+
+  const signature = c.req.header("stripe-signature");
+  if (!signature) {
+    return c.json({ error: "Missing Stripe-Signature header" }, 400);
+  }
+
+  // Read raw body for signature verification — BEFORE any JSON parsing
+  const rawBody = await c.req.text();
+
+  if (!verifyWebhookSignature(rawBody, signature, STRIPE_WEBHOOK_SECRET)) {
+    console.error("[billing] Webhook signature verification failed");
+    return c.json({ error: "Invalid signature" }, 400);
+  }
+
+  // Signature verified — now parse the event
+  let event: any;
+  try {
+    event = JSON.parse(rawBody);
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data?.object;
+    if (!session) {
+      console.error("[billing] Webhook checkout.session.completed missing data.object");
+      return c.json({ received: true }, 200);
+    }
+
+    const userId = session.metadata?.user_id;
+    const tier = session.metadata?.tier;
+    const creditsAmount = parseInt(session.metadata?.credits_amount || "0", 10);
+    const paymentIntent = session.payment_intent;
+
+    if (!userId || !creditsAmount || !paymentIntent) {
+      console.error("[billing] Webhook missing required metadata:", { userId, tier, creditsAmount, paymentIntent });
+      return c.json({ received: true }, 200);
+    }
+
+    // Verify user exists
+    const user = db.query("SELECT id FROM users WHERE id = ?").get(userId) as { id: string } | null;
+    if (!user) {
+      console.error(`[billing] Webhook user_id ${userId} not found in database`);
+      return c.json({ received: true }, 200);
+    }
+
+    // Grant credits (idempotent — addCredits handles duplicate stripe_payment_intent)
+    const result = addCredits(db, userId, creditsAmount, `${tier} tier purchase`, paymentIntent);
+
+    if (result.success) {
+      logAuthEvent(db, userId, "credit_purchase", "", "", {
+        tier,
+        credits: creditsAmount,
+        payment_intent: paymentIntent,
+        new_balance: result.newBalance,
+      });
+      console.log(`[billing] Granted ${creditsAmount} credits to user ${userId} (${tier} tier, pi: ${paymentIntent})`);
+    } else if (result.error === "duplicate") {
+      console.log(`[billing] Duplicate webhook for payment_intent ${paymentIntent}, skipping`);
+    } else {
+      console.error(`[billing] Failed to grant credits for ${paymentIntent}:`, result);
+    }
+  }
+
+  // Always return 200 to acknowledge receipt (even for unhandled event types)
+  return c.json({ received: true }, 200);
+});
 
 // Serve discovery files at root (Caddy proxies apimesh.xyz to dashboard)
 app.get("/llms.txt", publicLimit, async (c) => {
@@ -982,6 +1058,204 @@ app.delete("/auth/sessions", authLimit, async (c) => {
   return c.json({ success: true });
 });
 
+// --- API Key management endpoints ---
+
+// POST /auth/keys — create a new API key
+app.post("/auth/keys", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.json({ error: "Not authenticated." }, 401);
+  }
+
+  const ip = getIp(c);
+  const userAgent = getUserAgent(c);
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const label = typeof body.label === "string" ? body.label.trim() : "";
+  if (!label || label.length > 64) {
+    return c.json({ error: "Label is required (max 64 characters)." }, 400);
+  }
+
+  const result = createApiKey(db, auth.userId, label);
+  if ("error" in result) {
+    return c.json({ error: result.error }, 400);
+  }
+
+  logAuthEvent(db, auth.userId, "api_key_created", ip, userAgent, { key_id: result.id, prefix: result.prefix });
+
+  return c.json({
+    success: true,
+    key: {
+      id: result.id,
+      plaintext: result.plaintext,
+      prefix: result.prefix,
+      label: label,
+    },
+  });
+});
+
+// GET /auth/keys — list user's API keys
+app.get("/auth/keys", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.json({ error: "Not authenticated." }, 401);
+  }
+
+  const keys = getUserKeys(db, auth.userId);
+  return c.json({ keys });
+});
+
+// DELETE /auth/keys/:id — revoke an API key
+app.delete("/auth/keys/:id", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.json({ error: "Not authenticated." }, 401);
+  }
+
+  const ip = getIp(c);
+  const userAgent = getUserAgent(c);
+  const keyId = c.req.param("id");
+
+  const revoked = revokeApiKey(db, keyId, auth.userId);
+  if (!revoked) {
+    return c.json({ error: "Key not found or already revoked." }, 404);
+  }
+
+  logAuthEvent(db, auth.userId, "api_key_revoked", ip, userAgent, { key_id: keyId });
+
+  return c.json({ success: true });
+});
+
+// --- Billing routes (session-protected) ---
+app.post("/billing/checkout", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) return c.json({ error: "Unauthorized" }, 401);
+
+  const ip = getIp(c);
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { tier } = body;
+  if (!tier || typeof tier !== "string" || !CREDIT_TIERS[tier]) {
+    return c.json({ error: "Invalid tier. Must be one of: starter, builder, pro, scale" }, 400);
+  }
+
+  const user = db.query("SELECT email FROM users WHERE id = ?").get(auth.userId) as { email: string } | null;
+  if (!user) return c.json({ error: "User not found" }, 404);
+
+  const result = await createCheckoutSession(auth.userId, user.email, tier);
+
+  if ("error" in result) {
+    return c.json({ error: result.error }, 500);
+  }
+
+  logAuthEvent(db, auth.userId, "checkout_initiated", ip, getUserAgent(c), { tier });
+  return c.json({ checkout_url: result.url });
+});
+
+app.get("/billing/balance", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) return c.json({ error: "Unauthorized" }, 401);
+
+  const balance = getBalance(db, auth.userId);
+  return c.json({ balance_microdollars: balance });
+});
+
+app.get("/billing/tiers", publicLimit, (c) => {
+  const tiers = Object.entries(CREDIT_TIERS).map(([key, tier]) => ({
+    id: key,
+    label: tier.label,
+    price_cents: tier.price,
+    price_display: `$${(tier.price / 100).toFixed(0)}`,
+    credits_microdollars: tier.credits,
+    bonus_percent: tier.bonus,
+  }));
+  return c.json({ tiers });
+});
+
+// --- Transaction history (session-protected, paginated) ---
+app.get("/billing/transactions", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) return c.json({ error: "Unauthorized" }, 401);
+
+  const limit = Math.min(Math.max(parseInt(c.req.query("limit") || "50", 10) || 50, 1), 100);
+  const offset = Math.max(parseInt(c.req.query("offset") || "0", 10) || 0, 0);
+
+  const transactions = getTransactions(db, auth.userId, limit, offset);
+  return c.json({ transactions });
+});
+
+// --- Alert threshold (read current) ---
+app.get("/billing/alert-threshold", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) return c.json({ error: "Unauthorized" }, 401);
+
+  const row = db.query(
+    "SELECT alert_threshold_microdollars FROM credit_balances WHERE user_id = ?"
+  ).get(auth.userId) as { alert_threshold_microdollars: number | null } | null;
+
+  return c.json({ threshold_microdollars: row?.alert_threshold_microdollars ?? null });
+});
+
+// --- Alert threshold (set/clear) ---
+app.post("/billing/alert-threshold", authLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) return c.json({ error: "Unauthorized" }, 401);
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "Invalid JSON" }, 400);
+  }
+
+  const { threshold_microdollars } = body;
+
+  if (threshold_microdollars === null || threshold_microdollars === 0) {
+    db.run("UPDATE credit_balances SET alert_threshold_microdollars = NULL WHERE user_id = ?", [auth.userId]);
+    return c.json({ success: true, threshold_microdollars: null });
+  }
+
+  if (typeof threshold_microdollars !== "number" || threshold_microdollars < 0 || !Number.isInteger(threshold_microdollars)) {
+    return c.json({ error: "Threshold must be a positive integer (microdollars) or null/0 to disable" }, 400);
+  }
+
+  db.run("UPDATE credit_balances SET alert_threshold_microdollars = ? WHERE user_id = ?", [threshold_microdollars, auth.userId]);
+  return c.json({ success: true, threshold_microdollars });
+});
+
+// --- Billing page (session-protected) ---
+app.get("/account/billing", publicLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.redirect("/login", 302);
+  }
+
+  const file = Bun.file(join(import.meta.dir, "../landing/billing.html"));
+  if (await file.exists()) {
+    return new Response(await file.text(), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; connect-src 'self'",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+  return c.text("Billing page not found", 404);
+});
+
 // --- Settings page (session-protected) ---
 app.get("/account/settings", publicLimit, async (c) => {
   const auth = await getAuthenticatedUser(c);
@@ -1004,7 +1278,29 @@ app.get("/account/settings", publicLimit, async (c) => {
   return c.text("Settings page not found", 404);
 });
 
-// --- Account page (placeholder, session-protected) ---
+// --- API Keys management page (session-protected) ---
+app.get("/account/keys", publicLimit, async (c) => {
+  const auth = await getAuthenticatedUser(c);
+  if (!auth) {
+    return c.redirect("/login", 302);
+  }
+
+  const file = Bun.file(join(import.meta.dir, "../landing/keys.html"));
+  if (await file.exists()) {
+    return new Response(await file.text(), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src data:; connect-src 'self'",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
+  return c.text("Keys page not found", 404);
+});
+
+// --- Account page (session-protected) ---
 app.get("/account", publicLimit, async (c) => {
   const auth = await getAuthenticatedUser(c);
   if (!auth) {
