@@ -16,10 +16,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Signup & Login** - User registration, email verification, login, logout, session cookies (completed 2026-03-17)
 - [x] **Phase 3: Auth Hardening & Sessions** - Lockout, password reset, password change, session management UI (completed 2026-03-17)
 - [x] **Phase 4: API Keys** - Key creation, display, revocation, management page (completed 2026-03-18)
-- [ ] **Phase 5: Stripe Billing** - Checkout integration, webhook handler, credit purchases
-- [ ] **Phase 6: Credits & Account Dashboard** - Balance display, transaction history, low-balance alerts, account overview
-- [ ] **Phase 7: API Key Auth Middleware** - Branching middleware across all 21 APIs, credit deduction, Caddy routes
-- [ ] **Phase 8: MCP & Landing Page** - MCP server API key support, landing page signup CTA
+- [x] **Phase 5: Stripe Billing** - Checkout integration, webhook handler, credit purchases (completed 2026-03-18)
+- [x] **Phase 6: Credits & Account Dashboard** - Balance display, transaction history, low-balance alerts, account overview (completed 2026-03-18)
+- [x] **Phase 7: API Key Auth Middleware** - Branching middleware across all 21 APIs, credit deduction, Caddy routes (completed 2026-03-18)
+- [x] **Phase 8: MCP & Landing Page** - MCP server API key support, landing page signup CTA (completed 2026-03-18)
+- [ ] **Phase 9: Bug Fixes & Code Gaps** - Fix SESS-02 cookie, INT-08 request logging, INFRA-04 Caddy webhook
+- [ ] **Phase 10: Verification & Traceability** - VERIFICATION.md for phases 1/4/5/7, traceability updates
 
 ## Phase Details
 
@@ -118,8 +120,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: Transaction history API, billing page extension, alert threshold migration
-- [ ] 06-02: Low-balance alert integration in deductAndRecord, account overview dashboard
+- [x] 06-01: Transaction history API, billing page extension, alert threshold migration
+- [x] 06-02: Low-balance alert integration in deductAndRecord, account overview dashboard
 
 ### Phase 7: API Key Auth Middleware
 **Goal**: All 21 APIs accept API key authentication as an alternative to x402, with atomic credit deduction
@@ -149,14 +151,44 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: MCP server API key support (APIMESH_API_KEY env var, callApi() header injection, version bump to 1.5.0)
-- [ ] 08-02: Landing page update with signup CTA (nav links, hero button, copy reframing)
+- [x] 08-01: MCP server API key support (APIMESH_API_KEY env var, callApi() header injection, version bump to 1.5.0)
+- [x] 08-02: Landing page update with signup CTA (nav links, hero button, copy reframing)
+
+### Phase 9: Bug Fixes & Code Gaps
+**Goal**: Fix all code and config bugs identified in milestone audit
+**Depends on**: Phase 7
+**Requirements**: SESS-02, INT-08, INFRA-04
+**Gap Closure:** Closes gaps from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. `/auth/verify` auto-login cookie uses `sameSite: "Strict"` and `maxAge: 30 * 24 * 60 * 60` (matching `/auth/login`)
+  2. API key calls populate `requests.user_id` and `requests.api_key_id` columns (no longer NULL)
+  3. Caddy has a dedicated `handle /billing/webhook` block before `@auth_paths` with no CSP headers
+**Plans**: TBD
+
+Plans:
+- [ ] 09-01: Fix SESS-02 cookie bug, INT-08 request logging, INFRA-04 Caddy webhook block
+
+### Phase 10: Verification & Traceability
+**Goal**: Create VERIFICATION.md for unverified phases and update all traceability checkboxes
+**Depends on**: Phase 9
+**Requirements**: BILL-01, BILL-02, BILL-03, BILL-04, BILL-05, FE-06, KEY-01, KEY-03, KEY-05, KEY-06, KEY-07, FE-05, INT-01, INT-02, INT-03, INT-04, INT-05, INT-06, INT-07, SESS-01, SESS-07, KEY-02, KEY-04, BILL-06, INFRA-01, INFRA-02, INFRA-03, INFRA-06
+**Gap Closure:** Closes gaps from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. Phases 1, 4, 5, 7 each have a VERIFICATION.md confirming requirements satisfied
+  2. Phase 5 summaries have YAML frontmatter with `requirements-completed` field
+  3. All 61 requirements in REQUIREMENTS.md have correct checkbox status
+  4. All ROADMAP.md phase checkboxes reflect actual completion status
+**Plans**: TBD
+
+Plans:
+- [ ] 10-01: Verify phases 1, 4, 5, 7 and update all traceability
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
 Note: Phases 3, 4, and 5 all depend on Phase 2 but are independent of each other.
+Phase 9 fixes code bugs from audit. Phase 10 creates verification artifacts and updates traceability.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -165,6 +197,8 @@ Note: Phases 3, 4, and 5 all depend on Phase 2 but are independent of each other
 | 3. Auth Hardening & Sessions | 3/3 | Complete   | 2026-03-17 |
 | 4. API Keys | 2/2 | Complete | 2026-03-18 |
 | 5. Stripe Billing | 3/3 | Complete | 2026-03-18 |
-| 6. Credits & Account Dashboard | 0/2 | Not started | - |
+| 6. Credits & Account Dashboard | 2/2 | Complete | 2026-03-18 |
 | 7. API Key Auth Middleware | 3/3 | Complete | 2026-03-18 |
-| 8. MCP & Landing Page | 0/2 | Planned | - |
+| 8. MCP & Landing Page | 2/2 | Complete | 2026-03-18 |
+| 9. Bug Fixes & Code Gaps | 0/1 | Not started | - |
+| 10. Verification & Traceability | 0/1 | Not started | - |

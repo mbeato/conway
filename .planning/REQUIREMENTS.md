@@ -22,7 +22,7 @@
 ### Sessions
 
 - [x] **SESS-01**: Sessions stored server-side in SQLite with crypto-random 256-bit IDs
-- [x] **SESS-02**: Session cookie is httpOnly, Secure, SameSite=Strict, 30-day expiry
+- [ ] **SESS-02**: Session cookie is httpOnly, Secure, SameSite=Strict, 30-day expiry
 - [x] **SESS-03**: Session expiry uses sliding window (refreshed on each authenticated request)
 - [x] **SESS-04**: Maximum 10 active sessions per user (oldest auto-revoked on new login)
 - [x] **SESS-05**: User can view active sessions (IP, user agent, created date)
@@ -48,7 +48,7 @@
 - [ ] **BILL-05**: Webhook signature verified with timing-safe comparison, reject events >5min old
 - [x] **BILL-06**: Credit balance stored in integer microdollars (no floating point)
 - [x] **BILL-07**: User can view transaction history (purchases, usage, refunds) in dashboard
-- [ ] **BILL-08**: User receives email alert when credits drop below configurable threshold
+- [x] **BILL-08**: User receives email alert when credits drop below configurable threshold
 - [x] **BILL-09**: Credit balance visible in account overview dashboard
 
 ### API Key Auth Integration
@@ -64,22 +64,22 @@
 
 ### MCP Integration
 
-- [ ] **MCP-01**: MCP server reads APIMESH_API_KEY from environment variable
-- [ ] **MCP-02**: MCP server passes API key as Authorization: Bearer header on all API calls
-- [ ] **MCP-03**: MCP server works without API key (falls back to x402/free previews as today)
+- [x] **MCP-01**: MCP server reads APIMESH_API_KEY from environment variable
+- [x] **MCP-02**: MCP server passes API key as Authorization: Bearer header on all API calls
+- [x] **MCP-03**: MCP server works without API key (falls back to x402/free previews as today)
 
 ### Frontend
 
 - [x] **FE-01**: Signup page at /signup with email + password form
 - [x] **FE-02**: Login page at /login with email + password form
 - [x] **FE-03**: Password reset page at /forgot-password
-- [ ] **FE-04**: Account overview at /account (balance, usage chart, quick buy, active keys)
+- [x] **FE-04**: Account overview at /account (balance, usage chart, quick buy, active keys)
 - [ ] **FE-05**: API key management at /account/keys (create, list, revoke)
 - [ ] **FE-06**: Billing page at /account/billing (balance, tier cards, transaction history)
 - [x] **FE-07**: Settings page at /account/settings (change password, active sessions, logout all)
 - [x] **FE-08**: All account pages use server-rendered HTML + vanilla JS (no React)
 - [x] **FE-09**: Design matches existing landing page (Space Grotesk, JetBrains Mono, dark theme)
-- [ ] **FE-10**: Landing page updated with "Sign Up" CTA and reframed copy
+- [x] **FE-10**: Landing page updated with "Sign Up" CTA and reframed copy
 
 ### Infrastructure
 
@@ -140,7 +140,7 @@
 | AUTH-10 | Phase 3 | Complete |
 | AUTH-11 | Phase 3 | Complete |
 | SESS-01 | Phase 1 | Complete |
-| SESS-02 | Phase 2 | Complete |
+| SESS-02 | Phase 9 | Pending |
 | SESS-03 | Phase 2 | Complete |
 | SESS-04 | Phase 3 | Complete |
 | SESS-05 | Phase 3 | Complete |
@@ -160,7 +160,7 @@
 | BILL-05 | Phase 5 | Pending |
 | BILL-06 | Phase 1 | Complete |
 | BILL-07 | Phase 6 | Complete |
-| BILL-08 | Phase 6 | Pending |
+| BILL-08 | Phase 6 | Complete |
 | BILL-09 | Phase 6 | Complete |
 | INT-01 | Phase 7 | Pending |
 | INT-02 | Phase 7 | Pending |
@@ -169,24 +169,24 @@
 | INT-05 | Phase 7 | Pending |
 | INT-06 | Phase 7 | Pending |
 | INT-07 | Phase 7 | Pending |
-| INT-08 | Phase 7 | Pending |
-| MCP-01 | Phase 8 | Pending |
-| MCP-02 | Phase 8 | Pending |
-| MCP-03 | Phase 8 | Pending |
+| INT-08 | Phase 9 | Pending |
+| MCP-01 | Phase 8 | Complete |
+| MCP-02 | Phase 8 | Complete |
+| MCP-03 | Phase 8 | Complete |
 | FE-01 | Phase 2 | Complete |
 | FE-02 | Phase 2 | Complete |
 | FE-03 | Phase 3 | Complete |
-| FE-04 | Phase 6 | Pending |
+| FE-04 | Phase 6 | Complete |
 | FE-05 | Phase 4 | Pending |
 | FE-06 | Phase 5 | Pending |
 | FE-07 | Phase 3 | Complete |
 | FE-08 | Phase 2 | Complete |
 | FE-09 | Phase 2 | Complete |
-| FE-10 | Phase 8 | Pending |
+| FE-10 | Phase 8 | Complete |
 | INFRA-01 | Phase 1 | Complete |
 | INFRA-02 | Phase 1 | Complete |
-| INFRA-03 | Phase 7 | Pending |
-| INFRA-04 | Phase 5 | Pending |
+| INFRA-03 | Phase 10 | Pending |
+| INFRA-04 | Phase 9 | Pending |
 | INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Complete |
 
