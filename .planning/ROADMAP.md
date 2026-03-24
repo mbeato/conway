@@ -22,6 +22,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 8: MCP & Landing Page** - MCP server API key support, landing page signup CTA (completed 2026-03-18)
 - [x] **Phase 9: Bug Fixes & Code Gaps** - Fix SESS-02 cookie, INT-08 request logging, INFRA-04 Caddy webhook (completed 2026-03-23)
 - [x] **Phase 10: Verification & Traceability** - VERIFICATION.md for phases 1/4/5/7, traceability updates (completed 2026-03-24)
+- [ ] **Phase 11: Platform Analytics & Security Hardening** - Fix split accounting, user enumeration, Caddy header stripping
+- [ ] **Phase 12: Documentation Backfill** - Fill SUMMARY frontmatter gaps in Phase 2 plans
 
 ## Phase Details
 
@@ -185,6 +187,35 @@ Plans:
 - [x] 10-02-PLAN.md — Verify phases 5 and 7
 - [x] 10-03-PLAN.md — Update REQUIREMENTS.md and ROADMAP.md checkboxes
 
+### Phase 11: Platform Analytics & Security Hardening
+**Goal**: Fix split accounting for API key revenue analytics and close minor security gaps
+**Depends on**: Phase 7
+**Requirements**: INT-08
+**Gap Closure:** Closes INT-08 partial integration gap + tech debt from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. `apiLogger` records API key authenticated requests with `paid=true` and correct `amount_usd` in the requests table
+  2. `getRevenueByApi` and `getTotalRevenue` accurately reflect API key revenue
+  3. Wrong password on unverified account returns the same response as wrong password on verified account (no enumeration)
+  4. Caddy `*.apimesh.xyz` block strips `X-APIMesh-User-Id` and `X-APIMesh-Key-Id` headers from external requests
+**Plans**: TBD
+
+Plans:
+- [ ] 11-01: Fix apiLogger split accounting and revenue analytics
+- [ ] 11-02: Fix user enumeration on unverified accounts
+- [ ] 11-03: Strip internal headers in Caddy wildcard block
+
+### Phase 12: Documentation Backfill
+**Goal**: Fill SUMMARY frontmatter gaps in Phase 2 plans
+**Depends on**: None
+**Requirements**: None (documentation only)
+**Gap Closure:** Closes SUMMARY frontmatter tech debt from v1.0 audit
+**Success Criteria** (what must be TRUE):
+  1. Plans 02-02 and 02-03 have `requirements-completed` YAML frontmatter listing AUTH-06, AUTH-08, SESS-03, FE-01, FE-02, FE-08, FE-09
+**Plans**: TBD
+
+Plans:
+- [ ] 12-01: Add requirements-completed frontmatter to Phase 2 SUMMARY files
+
 ## Progress
 
 **Execution Order:**
@@ -203,4 +234,6 @@ Phase 9 fixes code bugs from audit. Phase 10 creates verification artifacts and 
 | 7. API Key Auth Middleware | 3/3 | Complete | 2026-03-18 |
 | 8. MCP & Landing Page | 2/2 | Complete | 2026-03-18 |
 | 9. Bug Fixes & Code Gaps | 1/1 | Complete | 2026-03-23 |
-| 10. Verification & Traceability | 3/3 | Complete   | 2026-03-24 |
+| 10. Verification & Traceability | 3/3 | Complete    | 2026-03-24 |
+| 11. Platform Analytics & Security Hardening | 0/3 | Pending | — |
+| 12. Documentation Backfill | 0/1 | Pending | — |
