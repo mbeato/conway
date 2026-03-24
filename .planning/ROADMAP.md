@@ -55,9 +55,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 02-01: Signup flow (registration, HIBP check, zxcvbn, email verification)
-- [ ] 02-02: Login, logout, and session cookie management
-- [ ] 02-03: Auth frontend pages (signup.html, login.html, verify.html)
+- [x] 02-01: Signup flow (registration, HIBP check, zxcvbn, email verification)
+- [x] 02-02: Login, logout, and session cookie management
+- [x] 02-03: Auth frontend pages (signup.html, login.html, verify.html)
 
 ### Phase 3: Auth Hardening & Sessions
 **Goal**: Account security features and session management are complete
@@ -74,7 +74,7 @@ Plans:
 Plans:
 - [x] 03-01: Progressive lockout and session limit enforcement (AUTH-07, SESS-04)
 - [x] 03-02: Password reset/change flows and forgot-password page (AUTH-09, AUTH-10, AUTH-11, FE-03)
-- [ ] 03-03: Session management UI and settings page (SESS-05, SESS-06, FE-07)
+- [x] 03-03: Session management UI and settings page (SESS-05, SESS-06, FE-07)
 
 ### Phase 4: API Keys
 **Goal**: Users can create and manage API keys for programmatic access
@@ -178,10 +178,12 @@ Plans:
   2. Phase 5 summaries have YAML frontmatter with `requirements-completed` field
   3. All 61 requirements in REQUIREMENTS.md have correct checkbox status
   4. All ROADMAP.md phase checkboxes reflect actual completion status
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 10-01: Verify phases 1, 4, 5, 7 and update all traceability
+- [ ] 10-01-PLAN.md — Verify phases 1 and 4, add Phase 5 summary frontmatter
+- [ ] 10-02-PLAN.md — Verify phases 5 and 7
+- [ ] 10-03-PLAN.md — Update REQUIREMENTS.md and ROADMAP.md checkboxes
 
 ## Progress
 
@@ -201,4 +203,4 @@ Phase 9 fixes code bugs from audit. Phase 10 creates verification artifacts and 
 | 7. API Key Auth Middleware | 3/3 | Complete | 2026-03-18 |
 | 8. MCP & Landing Page | 2/2 | Complete | 2026-03-18 |
 | 9. Bug Fixes & Code Gaps | 1/1 | Complete | 2026-03-23 |
-| 10. Verification & Traceability | 0/1 | Not started | - |
+| 10. Verification & Traceability | 0/3 | Not started | - |
