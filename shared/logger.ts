@@ -14,8 +14,15 @@ export function apiLogger(apiName: string, priceUsd: number = 0): MiddlewareHand
 
     // x402 sets PAYMENT-RESPONSE header after successful settlement
     const paymentResponse = c.res.headers.get("PAYMENT-RESPONSE") || c.res.headers.get("X-PAYMENT-RESPONSE");
-    const paid = !!paymentResponse && c.res.status < 400;
-    const amount = paid ? priceUsd : 0;
+    const x402Paid = !!paymentResponse && c.res.status < 400;
+
+    // API key auth sets X-APIMesh-Paid header with USD amount when credits were deducted
+    const apiKeyPaidHeader = c.req.header("x-apimesh-paid");
+    const apiKeyPaid = !!apiKeyPaidHeader && c.res.status < 400;
+    const apiKeyAmount = apiKeyPaid ? parseFloat(apiKeyPaidHeader!) : 0;
+
+    const paid = x402Paid || apiKeyPaid;
+    const amount = x402Paid ? priceUsd : (apiKeyPaid ? apiKeyAmount : 0);
 
     // Trust x-real-ip set by Caddy — "direct" means request bypassed proxy
     const clientIp = sanitizeLogField(c.req.header("x-real-ip") || "direct");
@@ -31,16 +38,21 @@ export function apiLogger(apiName: string, priceUsd: number = 0): MiddlewareHand
     logRequest(apiName, path, c.req.method, c.res.status, ms, paid, amount, clientIp, payerWallet, userId, apiKeyId);
 
     if (paid && amount > 0) {
-      // Attempt to extract txHash from settlement response
-      let txHash = "";
-      try {
-        const decoded = Buffer.from(paymentResponse!, "base64").toString("utf-8");
-        const settlement = JSON.parse(decoded);
-        txHash = settlement?.transaction ?? settlement?.txHash ?? "";
-      } catch {
-        // Settlement header may not be base64 JSON — log without txHash
+      if (x402Paid) {
+        // x402 settlement — extract txHash from PAYMENT-RESPONSE
+        let txHash = "";
+        try {
+          const decoded = Buffer.from(paymentResponse!, "base64").toString("utf-8");
+          const settlement = JSON.parse(decoded);
+          txHash = settlement?.transaction ?? settlement?.txHash ?? "";
+        } catch {
+          // Settlement header may not be base64 JSON — log without txHash
+        }
+        logRevenue(apiName, amount, txHash, NETWORK, payerWallet);
+      } else if (apiKeyPaid) {
+        // API key credit deduction — log with network="credits"
+        logRevenue(apiName, amount, "", "credits", undefined);
       }
-      logRevenue(apiName, amount, txHash, NETWORK, payerWallet);
     }
   };
 }
