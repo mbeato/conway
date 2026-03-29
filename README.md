@@ -1,67 +1,40 @@
 # APIMesh
 
-[![APIs](https://img.shields.io/badge/APIs-22%2B-brightgreen)](https://apimesh.xyz)
-[![MCP Tools](https://img.shields.io/badge/MCP%20tools-22-blue)](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server)
-[![npm](https://img.shields.io/npm/v/@mbeato/apimesh-mcp-server)](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server)
-[![Payments](https://img.shields.io/badge/payments-x402%20%7C%20MPP%20%7C%20API%20key-orange)](#payments)
+[![npm version](https://img.shields.io/npm/v/@mbeato/apimesh-mcp-server)](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server)
+[![npm downloads](https://img.shields.io/npm/dm/@mbeato/apimesh-mcp-server)](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server)
+[![APIs](https://img.shields.io/badge/APIs-20-brightgreen)](https://apimesh.xyz)
+[![MCP Tools](https://img.shields.io/badge/MCP%20tools-16-blue)](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow)](LICENSE)
+[![Payments](https://img.shields.io/badge/payments-x402%20%7C%20MPP%20%7C%20API%20key-orange)](#payment-methods)
 
-22+ pay-per-call web analysis APIs for AI agents and developers. Security audits, tech stack detection, email verification, SEO analysis, and more.
+**Pay-per-call web analysis APIs for AI agents and developers.** Security audits, performance monitoring, SEO analysis, email verification, tech stack detection, and more -- no signup required, just pay with USDC on Base and get your response.
 
-## What is this?
+APIMesh is a collection of 20 focused web analysis APIs, each on its own subdomain, with a 16-tool MCP server for direct use in Claude, Cursor, Windsurf, Cline, and any MCP-compatible client. Every endpoint supports three payment methods: crypto micropayments via [x402](https://www.x402.org/), card payments via [Stripe MPP](https://mpp.dev), and traditional API keys via [Stripe checkout](https://apimesh.xyz/signup).
 
-APIMesh is an autonomous API mesh that builds and deploys web analysis APIs. Every endpoint supports three payment methods:
+[**Live Site**](https://apimesh.xyz) -- [**Dashboard**](https://apimesh.xyz/dashboard) -- [**npm**](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server) -- [**MCP Registry**](https://registry.modelcontextprotocol.io) -- [**Smithery**](https://smithery.ai/servers/apimesh/apimesh-mcp-server)
 
-- **[x402](https://www.x402.org/)** -- pay per call with USDC on Base (no signup needed)
-- **[MPP](https://mpp.dev)** -- Stripe's Machine Payments Protocol (cards + stablecoins)
-- **API key + credits** -- traditional auth via [Stripe checkout](https://apimesh.xyz/signup)
-
-Most tools have **free `/preview` endpoints** so agents can verify the API works before paying.
-
-**MCP Server**: Install as an MCP tool for Claude, Cursor, Cline, or any MCP client:
-```bash
-npm install @mbeato/apimesh-mcp-server
-```
-
-## Tools
-
-| Tool | Endpoint | Price | What it does |
-|------|----------|-------|-------------|
-| **Core Web Vitals** | `GET /check?url=` | $0.005 | Lighthouse scores, LCP, CLS, INP field data |
-| **Security Headers** | `GET /check?url=` | $0.005 | Audit 10 HTTP security headers with A+ to F grading |
-| **SEO Audit** | `GET /check?url=` | $0.003 | On-page SEO analysis with 0-100 score |
-| **Email Security** | `GET /check?domain=` | $0.01 | SPF, DKIM, DMARC, MX records with provider detection |
-| **Brand Assets** | `GET /check?domain=` | $0.002 | Extract logos, favicons, colors, OG images from any domain |
-| **Redirect Chain** | `GET /check?url=` | $0.001 | Trace full redirect chain with per-hop latency |
-| **Indexability** | `GET /check?url=` | $0.001 | 5-layer analysis: robots.txt, HTTP status, meta robots, X-Robots-Tag, canonical |
-| **Web Checker** | `GET /check?name=` | $0.005 | Brand name availability across 5 TLDs, GitHub, npm, PyPI, Reddit |
-| **HTTP Status** | `GET /check?url=` | $0.001 | Live HTTP status check with optional expected code |
-| **Favicon Checker** | `GET /check?url=` | $0.001 | Check favicon existence, URL, format |
-| **Health Check** | `POST /check` | $0.003 | Parallel health check for up to 10 service URLs |
-| **Robots.txt Parser** | `GET /analyze?url=` | $0.001 | Parse robots.txt into structured rules and sitemaps |
-| **Email Verify** | `GET /check?email=` | $0.001 | Syntax, MX, disposable domain, role-address, deliverability |
-| **Tech Stack** | `GET /check?url=` | $0.003 | Detect CMS, frameworks, analytics, CDN, hosting from headers and HTML |
-
-Plus 6 utility APIs (regex builder, YAML validator, JWT generator, UA analyzer, status codes, Swagger docs).
-
-Each tool lives on its own subdomain: `https://{tool-name}.apimesh.xyz`
+---
 
 ## Quick Start
 
-### Try a free preview (no payment needed)
+### Try free previews (no payment, no signup)
 
 ```bash
 curl https://core-web-vitals.apimesh.xyz/preview?url=https://example.com
 curl https://security-headers.apimesh.xyz/preview?url=https://example.com
+curl https://seo-audit.apimesh.xyz/preview?url=https://example.com
 curl https://check.apimesh.xyz/preview?name=myapp
 ```
 
-### Use via MCP (Claude, Cursor, etc.)
+### Install the MCP server
+
+One command to add all 16 tools to your AI coding assistant:
 
 ```bash
 npx @mbeato/apimesh-mcp-server
 ```
 
-Or add to your MCP config:
+Or add to your MCP client config (`claude_desktop_config.json`, `.cursor/mcp.json`, etc.):
 
 ```json
 {
@@ -77,38 +50,129 @@ Or add to your MCP config:
 ### Direct API usage
 
 ```bash
-# Hit any paid endpoint — get a 402 with payment details
+# 1. Hit any paid endpoint -- returns 402 with payment details
 curl https://core-web-vitals.apimesh.xyz/check?url=https://example.com
 
-# Include x402 payment header — get the response
-curl -H "X-PAYMENT: ..." https://core-web-vitals.apimesh.xyz/check?url=https://example.com
+# 2. Include x402 payment header -- returns the full response
+curl -H "X-PAYMENT: <signed-usdc-payment>" \
+  https://core-web-vitals.apimesh.xyz/check?url=https://example.com
 ```
 
-## Discovery
+---
 
-- **MCP Registry**: [`io.github.mbeato/apimesh`](https://registry.modelcontextprotocol.io)
-- **x402 Discovery**: `https://apimesh.xyz/.well-known/x402`
-- **AI Docs**: `https://apimesh.xyz/llms.txt`
-- **x402scan**: [apimesh on x402scan](https://www.x402scan.com/server/4ee5dce3-d33c-40c1-91b0-c39891936b2c)
-- **npm**: [`@mbeato/apimesh-mcp-server`](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server)
+## All APIs
 
-## How x402 Works
+Every API lives on its own subdomain: `https://{api-name}.apimesh.xyz`
 
-1. Agent sends a request to any paid endpoint
-2. Server returns `402 Payment Required` with payment details (price, wallet, network)
-3. Agent signs a USDC payment on Base and includes it in the `X-PAYMENT` header
-4. Server verifies payment via Coinbase CDP facilitator and returns the response
+### Web Analysis APIs
 
-No API keys. No accounts. No subscriptions. Just pay and use.
+| API | Endpoint | Price | Description |
+|-----|----------|-------|-------------|
+| **Core Web Vitals** | `GET /check?url=` | $0.005 | Lighthouse scores, LCP, CLS, INP field data, performance/accessibility/SEO grades |
+| **Security Headers** | `GET /check?url=` | $0.005 | Audit 10 HTTP security headers with A+ to F grading and remediation tips |
+| **SEO Audit** | `GET /check?url=` | $0.003 | On-page SEO analysis: title, meta, headings, images, links, OG tags, JSON-LD (0-100 score) |
+| **Email Security** | `GET /check?domain=` | $0.01 | SPF, DKIM (probes 10 selectors), DMARC, MX records with provider detection |
+| **Brand Assets** | `GET /check?domain=` | $0.002 | Extract logos, favicons, theme colors, OG images, site name from any domain |
+| **Redirect Chain** | `GET /check?url=` | $0.001 | Trace full redirect chain with per-hop status codes, latency, and loop detection |
+| **Indexability** | `GET /check?url=` | $0.001 | 5-layer analysis: robots.txt, HTTP status, meta robots, X-Robots-Tag, canonical |
+| **Web Checker** | `GET /check?name=` | $0.005 | Brand name availability across 5 TLDs, GitHub, npm, PyPI, Reddit |
+| **HTTP Status** | `GET /check?url=` | $0.001 | Live HTTP status check with optional expected status code |
+| **Favicon Checker** | `GET /check?url=` | $0.001 | Check favicon existence, URL, and format |
+| **Health Check** | `POST /check` | $0.003 | Parallel health check for up to 10 service URLs |
+| **Robots.txt Parser** | `GET /analyze?url=` | $0.001 | Parse robots.txt into structured rules, sitemaps, and crawl directives |
+| **Email Verify** | `GET /check?email=` | $0.001 | Syntax validation, MX check, disposable domain detection, role-address, deliverability |
+| **Tech Stack** | `GET /check?url=` | $0.003 | Detect CMS, frameworks, analytics, CDN, hosting, JS libraries from headers + HTML |
+
+### Developer Utility APIs
+
+| API | Endpoint | Price | Description |
+|-----|----------|-------|-------------|
+| **Regex Builder** | `POST /build` | $0.002 | Generate and test regex patterns from natural language descriptions |
+| **YAML Validator** | `POST /validate` | $0.002 | Validate YAML syntax and structure |
+| **Mock JWT Generator** | `POST /generate` | $0.001 | Generate test JWTs with custom claims and expiry |
+| **User Agent Analyzer** | `GET /analyze?ua=` | $0.002 | Parse user agent strings into browser, OS, device, and bot info |
+| **Status Code Checker** | `GET /check?code=` | $0.001 | Lookup HTTP status code meaning and usage |
+| **Swagger Docs Creator** | `POST /generate` | $0.002 | Generate OpenAPI 3.0 documentation for your API endpoints |
+
+### Wallet & Spend Tracking (free, no auth)
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /wallet/{address}` | Spend summary (daily/7d/30d), active spend cap, recent requests |
+| `GET /wallet/{address}/history` | Paginated transaction history, filterable by API |
+| `PUT /wallet/{address}/cap` | Set daily/monthly spend caps on your wallet |
+
+---
+
+## Payment Methods
+
+APIMesh supports three ways to pay:
+
+### 1. x402 -- crypto micropayments (default)
+
+```
+Agent request --> 402 Payment Required (price, wallet, network)
+                  Agent signs USDC on Base --> includes X-PAYMENT header
+                  Server verifies via Coinbase CDP --> returns response
+```
+
+No accounts. No API keys. No subscriptions. The agent handles payment autonomously.
+
+- **Protocol:** [x402](https://www.x402.org/) (open standard)
+- **Currency:** USDC on Base (chain ID 8453)
+- **Facilitator:** Coinbase CDP
+
+### 2. MPP -- Stripe Machine Payments Protocol
+
+[Stripe MPP](https://mpp.dev) enables AI agents to pay with cards or stablecoins through Stripe's infrastructure.
+
+### 3. API key + credits
+
+Traditional auth for developers who prefer it. Purchase credits via [Stripe checkout](https://apimesh.xyz/signup) and include your API key in requests.
+
+---
+
+## Discovery & Integration
+
+| Channel | Link |
+|---------|------|
+| **npm** | [`@mbeato/apimesh-mcp-server`](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server) |
+| **MCP Registry** | [`io.github.mbeato/apimesh`](https://registry.modelcontextprotocol.io) |
+| **Smithery** | [apimesh-mcp-server](https://smithery.ai/servers/apimesh/apimesh-mcp-server) |
+| **x402scan** | [apimesh](https://www.x402scan.com/server/4ee5dce3-d33c-40c1-91b0-c39891936b2c) |
+| **x402 discovery** | `https://apimesh.xyz/.well-known/x402` |
+| **AI docs** | `https://apimesh.xyz/llms.txt` |
+| **AI plugin** | `https://apimesh.xyz/.well-known/ai-plugin.json` |
+
+Most APIs offer free `/preview` endpoints so agents can verify functionality before paying. Every API has free `/health` and `/` info endpoints.
+
+---
 
 ## Tech Stack
 
-- [Bun](https://bun.sh) runtime
-- [Hono](https://hono.dev) web framework
-- [x402](https://www.x402.org/) payment protocol
-- [Caddy](https://caddyserver.com) reverse proxy with automatic HTTPS
-- SQLite for analytics
+- [Bun](https://bun.sh) -- runtime and bundler
+- [Hono](https://hono.dev) -- web framework
+- [x402](https://www.x402.org/) -- payment protocol
+- [Caddy](https://caddyserver.com) -- reverse proxy with automatic HTTPS
+- SQLite -- analytics and usage tracking
+
+---
+
+## Contributing
+
+Contributions are welcome. If you find a bug or want to suggest a new API tool, [open an issue](https://github.com/mbeato/conway/issues).
+
+To run locally:
+
+```bash
+git clone https://github.com/mbeato/conway.git
+cd conway
+bun install
+bun run dev
+```
+
+---
 
 ## License
 
-MIT
+[MIT](LICENSE)
