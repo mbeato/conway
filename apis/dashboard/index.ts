@@ -283,35 +283,41 @@ app.get("/landing.js", publicLimit, async (c) => {
 });
 
 // --- Public tools endpoint for landing page (no auth) ---
+const TOOL_DESCRIPTIONS: Record<string, { desc: string; price: string }> = {
+  "web-checker": { desc: "Check brand/product name availability across 5 TLDs, GitHub, npm, PyPI, and Reddit in one call.", price: "$0.005" },
+  "core-web-vitals": { desc: "Google PageSpeed Insights — Lighthouse performance, accessibility, SEO scores plus LCP, CLS, INP field data.", price: "$0.005" },
+  "security-headers": { desc: "Audit 10 HTTP security headers with A+ to F grading and remediation suggestions.", price: "$0.005" },
+  "redirect-chain": { desc: "Trace the full HTTP redirect chain with per-hop status codes, latency, and loop detection.", price: "$0.001" },
+  "email-security": { desc: "Validate SPF, DKIM, and DMARC records. Detects email provider and grades overall email security.", price: "$0.01" },
+  "seo-audit": { desc: "On-page SEO analysis — title, meta, headings, images, links, OG tags, JSON-LD with a 0-100 score.", price: "$0.003" },
+  "indexability": { desc: "5-layer indexability analysis — robots.txt, HTTP status, meta robots, X-Robots-Tag, and canonical.", price: "$0.001" },
+  "indexability-checker": { desc: "5-layer indexability analysis — robots.txt, HTTP status, meta robots, X-Robots-Tag, and canonical.", price: "$0.001" },
+  "brand-assets": { desc: "Extract brand assets from any domain — logo URL, favicon, theme colors, OG image, and site name.", price: "$0.002" },
+  "email-verify": { desc: "Verify email addresses — syntax, MX record, disposable domain, role-address, and deliverability.", price: "$0.001" },
+  "tech-stack": { desc: "Detect website technology stack — CMS, frameworks, analytics, CDN, hosting, JS libs from headers and HTML.", price: "$0.003" },
+  "http-status-checker": { desc: "Check the live HTTP status of any URL with optional expected status code validation.", price: "$0.002" },
+  "favicon-checker": { desc: "Check whether a website has a favicon and returns its URL, format, and status.", price: "$0.002" },
+  "microservice-health-check": { desc: "Check health and response times of up to 10 service URLs in parallel.", price: "$0.003" },
+  "robots-txt-parser": { desc: "Parse robots.txt into structured rules, sitemaps, and crawl directives.", price: "$0.002" },
+  "status-code-checker": { desc: "Look up HTTP status code meaning and usage.", price: "$0.001" },
+  "regex-builder": { desc: "Generate and test regex patterns from natural language descriptions.", price: "$0.002" },
+  "user-agent-analyzer": { desc: "Parse user agent strings into browser, OS, device, and bot info.", price: "$0.002" },
+  "mock-jwt-generator": { desc: "Generate test JWTs with custom claims and expiry for local development.", price: "$0.001" },
+  "yaml-validator": { desc: "Validate YAML syntax and structure.", price: "$0.002" },
+  "swagger-docs-creator": { desc: "Generate OpenAPI 3.0 documentation for your API endpoints.", price: "$0.002" },
+};
+
 app.get("/api/tools", publicLimit, (c) => {
   const apis = getActiveApis();
   const tools = apis.map((api) => {
     const detail = getApiDetailedStats(api.name);
-    // Get price from source
-    let price = "$0.005";
-    try {
-      const src = Bun.file(join(import.meta.dir, `../${api.name}/index.ts`)).textSync?.() ?? "";
-      const priceMatch = src.match(/paidRoute(?:WithDiscovery)?\(\s*["'](\$[\d.]+)["']/);
-      if (priceMatch) price = priceMatch[1];
-      else {
-        const loggerMatch = src.match(/apiLogger\(\s*\w+\s*,\s*([\d.]+)\s*\)/);
-        if (loggerMatch) price = `$${loggerMatch[1]}`;
-      }
-    } catch {}
-    // Get description
-    let description = `${api.name} API`;
-    const backlog = db.query("SELECT description FROM backlog WHERE name = ?").get(api.name) as { description: string } | null;
-    if (backlog?.description) description = backlog.description;
-    else {
-      try {
-        const src = Bun.file(join(import.meta.dir, `../${api.name}/index.ts`)).textSync?.() ?? "";
-        const infoBlock = src.match(/app\.get\(\s*["']\/["'][\s\S]{0,500}?description:\s*["']([^"']{15,300})["']/);
-        if (infoBlock) description = infoBlock[1];
-        else {
-          const descMatch = src.match(/description:\s*["']([^"']{30,300})["']/);
-          if (descMatch) description = descMatch[1];
-        }
-      } catch {}
+    const override = TOOL_DESCRIPTIONS[api.name];
+    let price = override?.price ?? "$0.005";
+    let description = override?.desc ?? "";
+    // Fallback to backlog for brain-built APIs
+    if (!description) {
+      const backlog = db.query("SELECT description FROM backlog WHERE name = ?").get(api.name) as { description: string } | null;
+      description = backlog?.description ?? `${api.name} API`;
     }
     return {
       name: api.name,
