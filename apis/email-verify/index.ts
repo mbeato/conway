@@ -61,7 +61,9 @@ app.get("/preview", rateLimit("email-verify-preview", 20, 60_000), async (c) => 
       note: "Preview checks syntax, disposable, and role-address only. Pay via x402 for full MX verification and deliverability assessment.",
     });
   } catch (e: any) {
-    return c.json({ error: "Failed to verify email" }, 500);
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = /timeout|timed out|abort/i.test(msg) ? 504 : 502;
+    return c.json({ error: "Analysis temporarily unavailable", detail: msg }, status);
   }
 });
 
@@ -108,10 +110,11 @@ app.get("/check", async (c) => {
     return c.json(result);
   } catch (e: any) {
     const msg = e?.message ?? "";
+    const status = /timeout|timed out|abort/i.test(msg) ? 504 : 502;
     const safeMsg = msg.includes("timeout") ? "Request timed out"
       : msg.includes("DNS") ? "DNS lookup failed"
       : "Failed to verify email";
-    return c.json({ error: safeMsg }, 500);
+    return c.json({ error: safeMsg, detail: msg }, status);
   }
 });
 

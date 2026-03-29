@@ -135,7 +135,9 @@ app.get("/", async (c) => {
     return c.json(result);
   } catch (err) {
     // On fetch error
-    return c.json({ error: "Failed to fetch URL or network error" }, 500);
+    const msg = err instanceof Error ? err.message : String(err);
+    const status = /timeout|timed out|abort/i.test(msg) ? 504 : 502;
+    return c.json({ error: "Analysis temporarily unavailable", detail: msg }, status);
   }
 });
 

@@ -11,6 +11,7 @@ import { detectFull, detectPreview } from "./detector";
 function sanitizeError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (/^Only http|^Private|^Invalid URL|^URL returned|^Too many redirect|^Response body too large/.test(msg)) return msg;
+  if (/timeout|timed out|abort/i.test(msg)) return "Request timed out — the target site was too slow to respond";
   return "Failed to fetch or process the URL";
 }
 

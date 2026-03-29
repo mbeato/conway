@@ -82,11 +82,13 @@ app.get("/analyze", async (c) => {
   let res: Response;
   try {
     res = await safeFetch(robotsUrl.toString(), {
-      timeoutMs: 8000,
+      timeoutMs: 12000,
       headers: { "User-Agent": "robots-txt-parser/1.0 apimesh.xyz" },
     });
   } catch (e: any) {
-    return c.json({ error: `Failed to fetch robots.txt: ${e?.name === 'TimeoutError' ? 'timeout' : (e?.message || 'network error')}` }, 500);
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = /timeout|timed out|abort/i.test(msg) ? 504 : 502;
+    return c.json({ error: `Failed to fetch robots.txt: ${e?.name === 'TimeoutError' ? 'timeout' : (msg || 'network error')}`, detail: msg }, status);
   }
 
   if (!res.ok) {
@@ -104,8 +106,10 @@ app.get("/analyze", async (c) => {
       return c.json({ error: "robots.txt too large (max 512 KB supported)" }, 413);
     }
     lines = text.split(/\r?\n/).slice(0, 2000); // defensive: max 2000 lines
-  } catch {
-    return c.json({ error: "Failed to read robots.txt contents" }, 500);
+  } catch (e: any) {
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = /timeout|timed out|abort/i.test(msg) ? 504 : 502;
+    return c.json({ error: "Failed to read robots.txt contents", detail: msg }, status);
   }
 
   try {

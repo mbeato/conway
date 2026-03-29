@@ -11,6 +11,7 @@ import { traceRedirectChain } from "./tracer";
 function sanitizeError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (/^Only http|^Private|^Invalid URL|^Too many redirect|^Redirect chain contains|^Failed to reach|^Redirect to unsupported|^Redirect at hop|^Redirect chain exceeded|^URL exceeds/.test(msg)) return msg;
+  if (/timeout|timed out|abort/i.test(msg)) return "Request timed out — the target site was too slow to respond";
   return "Failed to trace redirect chain";
 }
 

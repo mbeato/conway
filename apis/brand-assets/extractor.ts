@@ -294,7 +294,7 @@ async function extractColorsFromCss(
   try {
     const res = await safeFetch(cssUrl, {
       ...FETCH_OPTS,
-      timeoutMs: 5000,
+      timeoutMs: 10000,
     });
     if (!res.ok) return;
 

@@ -54,7 +54,9 @@ app.get("/preview", rateLimit("security-headers-preview", 15, 60_000), async (c)
     return c.json(result);
   } catch (e: any) {
     console.error(`[${new Date().toISOString()}] ${API_NAME} preview error:`, e);
-    return c.json({ error: "Failed to analyze URL" }, 502);
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = /timeout|timed out|abort/i.test(msg) ? 504 : 502;
+    return c.json({ error: "Analysis temporarily unavailable", detail: msg }, status);
   }
 });
 
@@ -99,7 +101,9 @@ app.get("/check", async (c) => {
     return c.json(result);
   } catch (e: any) {
     console.error(`[${new Date().toISOString()}] ${API_NAME} check error:`, e);
-    return c.json({ error: "Failed to analyze URL" }, 502);
+    const msg = e instanceof Error ? e.message : String(e);
+    const status = /timeout|timed out|abort/i.test(msg) ? 504 : 502;
+    return c.json({ error: "Analysis temporarily unavailable", detail: msg }, status);
   }
 });
 
