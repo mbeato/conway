@@ -753,6 +753,10 @@ async function testStagingEndpoints(name: string, files: GeneratedFile[]): Promi
   // Find paid routes from the generated index.ts and verify they return 402
   const indexFile = files.find(f => f.path === "index.ts");
   if (indexFile) {
+    // Small delay after health check passes — paid routes may need extra time
+    // for the router to fully initialize after a staging restart.
+    await Bun.sleep(2000);
+
     // Match route patterns like "GET /analyze" or "POST /check" in paymentMiddleware config.
     // Only capture clean paths (letters, digits, hyphens, slashes, colons for params).
     const paidRoutePattern = /["'](GET|POST|PUT|DELETE|PATCH)\s+(\/[a-zA-Z0-9/:_-]*)["']/g;
@@ -762,11 +766,23 @@ async function testStagingEndpoints(name: string, files: GeneratedFile[]): Promi
       const path = match[2];
       if (path === "/health" || path === "/" || path === "/preview" || path.length < 2) continue;
 
+      let res: Response | undefined;
       try {
-        const res = await fetch(`${baseUrl}${path}`, {
+        res = await fetch(`${baseUrl}${path}`, {
           method,
           signal: AbortSignal.timeout(30_000),
         });
+
+        // Retry once on 502 — staging router may still be settling after restart
+        if (res.status === 502) {
+          console.log(`[build] Staging ${method} ${path}: 502 — retrying in 3s...`);
+          await Bun.sleep(3000);
+          res = await fetch(`${baseUrl}${path}`, {
+            method,
+            signal: AbortSignal.timeout(30_000),
+          });
+        }
+
         if (res.status === 402) {
           console.log(`[build] Staging ${method} ${path}: 402 (payment required) — correct`);
         } else if (res.status >= 500) {
