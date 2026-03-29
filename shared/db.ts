@@ -232,6 +232,34 @@ export function getRecentRequests(limit: number = 20) {
   `).all(Math.min(limit, 100));
 }
 
+export function getApiRequests(apiName: string, days: number = 1, limit: number = 100) {
+  return db.query(`
+    SELECT endpoint, method, status_code, response_time_ms, paid, amount_usd, client_ip, payer_wallet, created_at
+    FROM requests
+    WHERE api_name = ? AND created_at > datetime('now', '-' || ? || ' days')
+    ORDER BY created_at DESC LIMIT ?
+  `).all(apiName, safeDays(days), Math.min(limit, 500));
+}
+
+export function getApiErrors(apiName: string, days: number = 1, limit: number = 50) {
+  return db.query(`
+    SELECT endpoint, method, status_code, response_time_ms, client_ip, created_at
+    FROM requests
+    WHERE api_name = ? AND status_code >= 400 AND created_at > datetime('now', '-' || ? || ' days')
+    ORDER BY created_at DESC LIMIT ?
+  `).all(apiName, safeDays(days), Math.min(limit, 200));
+}
+
+export function getApiStatusBreakdown(apiName: string, days: number = 1) {
+  return db.query(`
+    SELECT status_code, COUNT(*) as count
+    FROM requests
+    WHERE api_name = ? AND created_at > datetime('now', '-' || ? || ' days')
+    GROUP BY status_code
+    ORDER BY count DESC
+  `).all(apiName, safeDays(days)) as { status_code: number; count: number }[];
+}
+
 export function getApiRevenue(apiName: string, days: number = 7): number {
   const result = db.query(`
     SELECT COALESCE(SUM(amount_usd), 0) as total_usd

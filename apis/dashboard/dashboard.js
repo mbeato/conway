@@ -279,8 +279,8 @@ function render(data) {
       var created = a.created_at ? new Date(a.created_at.replace(" ", "T") + (a.created_at.includes("Z") ? "" : "Z")).toLocaleDateString() : "--";
       var avg = a.avg_latency_ms != null ? a.avg_latency_ms.toFixed(0) : "--";
       var p95 = a.p95_latency_ms != null ? a.p95_latency_ms.toFixed(0) : "--";
-      return '<tr>' +
-        '<td class="primary"><a href="https://' + esc(a.subdomain) + '.apimesh.xyz" target="_blank">' + esc(a.name) + '</a></td>' +
+      return '<tr class="api-row" data-api="' + esc(a.name) + '" style="cursor:pointer">' +
+        '<td class="primary">' + esc(a.name) + '</td>' +
         '<td class="mono dim">' + created + '</td>' +
         '<td class="mono">' + fmtN(a.requests_range) + '</td>' +
         '<td class="mono">' + fmtN(a.total_requests) + '</td>' +
@@ -290,6 +290,11 @@ function render(data) {
         '<td class="mono dim">' + fmtN(a.unique_callers) + '</td>' +
         '<td class="mono green">' + fmt$(a.total_revenue_usd) + '</td></tr>';
     }).join("");
+
+    // Click handler for API rows
+    ab.querySelectorAll(".api-row").forEach(function(row) {
+      row.addEventListener("click", function() { loadApiDetail(row.dataset.api); });
+    });
   }
 
   var rb = document.getElementById("requests-table");
@@ -308,6 +313,91 @@ function render(data) {
         '<td>' + (r.paid ? '<span class="badge badge-paid">paid</span>' : '<span class="badge badge-free">free</span>') + '</td></tr>';
     }).join("");
   }
+}
+
+// --- API Detail Panel ---
+async function loadApiDetail(name) {
+  var tok = gt(); if (!tok) return;
+  var panel = document.getElementById("api-detail-panel");
+  if (!panel) {
+    // Create panel if it doesn't exist
+    var container = document.getElementById("apis-table").closest(".panel");
+    panel = document.createElement("div");
+    panel.id = "api-detail-panel";
+    panel.className = "panel";
+    panel.style.marginTop = "12px";
+    container.parentNode.insertBefore(panel, container.nextSibling);
+  }
+  panel.innerHTML = '<div class="panel-header">Loading ' + esc(name) + '...</div>';
+
+  try {
+    var res = await fetch(B + "/api/api-detail?name=" + encodeURIComponent(name) + "&range=" + currentRange, {
+      headers: { Authorization: "Bearer " + tok }
+    });
+    if (!res.ok) { panel.innerHTML = '<div class="panel-header">Error loading details</div>'; return; }
+    var d = await res.json();
+    renderApiDetail(d, panel);
+  } catch(e) {
+    panel.innerHTML = '<div class="panel-header">Error: ' + esc(e.message) + '</div>';
+  }
+}
+
+function renderApiDetail(d, panel) {
+  var html = '<div class="panel-header">' + esc(d.name) + ' — Detail (' + esc(d.range) + ')' +
+    '<span style="float:right;cursor:pointer;font-size:12px;opacity:0.5" onclick="this.closest(\'#api-detail-panel\').remove()">close</span></div>';
+
+  // Status breakdown
+  if (d.status_breakdown && d.status_breakdown.length) {
+    html += '<div style="margin:12px 0"><strong>Status Codes</strong></div>';
+    html += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">';
+    d.status_breakdown.forEach(function(s) {
+      var color = s.status_code >= 500 ? "#ff4444" : s.status_code >= 400 ? "#ff8800" : "#3ddc84";
+      html += '<div style="background:rgba(255,255,255,0.05);padding:6px 12px;border-radius:4px;border-left:3px solid ' + color + '">' +
+        '<span class="mono" style="color:' + color + '">' + s.status_code + '</span>' +
+        '<span class="mono dim" style="margin-left:8px">' + fmtN(s.count) + '</span></div>';
+    });
+    html += '</div>';
+  }
+
+  // Error log
+  if (d.errors && d.errors.length) {
+    html += '<div style="margin:12px 0"><strong>Errors (' + d.errors.length + ')</strong></div>';
+    html += '<table><thead><tr><th>Time</th><th>Method</th><th>Endpoint</th><th>Status</th><th>Latency</th><th>Client IP</th></tr></thead><tbody>';
+    d.errors.forEach(function(e) {
+      var sc = e.status_code;
+      var scClass = sc >= 500 ? "mono red" : "mono";
+      html += '<tr>' +
+        '<td class="mono dim">' + fmtTime(e.created_at) + '</td>' +
+        '<td class="mono dim">' + esc(e.method) + '</td>' +
+        '<td class="mono">' + esc(e.endpoint) + '</td>' +
+        '<td class="' + scClass + '">' + sc + '</td>' +
+        '<td class="mono dim">' + (e.response_time_ms != null ? e.response_time_ms.toFixed(0) + 'ms' : '--') + '</td>' +
+        '<td class="mono dim">' + esc(e.client_ip || '--') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div style="margin:12px 0;opacity:0.5">No errors in this period</div>';
+  }
+
+  // Recent requests
+  if (d.recent_requests && d.recent_requests.length) {
+    html += '<div style="margin:16px 0 8px"><strong>Recent Requests (last ' + Math.min(d.recent_requests.length, 50) + ')</strong></div>';
+    html += '<table><thead><tr><th>Time</th><th>Method</th><th>Endpoint</th><th>Status</th><th>Latency</th><th>Paid</th></tr></thead><tbody>';
+    d.recent_requests.slice(0, 50).forEach(function(r) {
+      var sc = r.status_code;
+      var scClass = sc >= 500 ? "mono red" : sc >= 400 ? "mono" : "mono green";
+      html += '<tr>' +
+        '<td class="mono dim">' + fmtTime(r.created_at) + '</td>' +
+        '<td class="mono dim">' + esc(r.method) + '</td>' +
+        '<td class="mono">' + esc(r.endpoint) + '</td>' +
+        '<td class="' + scClass + '">' + sc + '</td>' +
+        '<td class="mono dim">' + (r.response_time_ms != null ? r.response_time_ms.toFixed(0) + 'ms' : '--') + '</td>' +
+        '<td>' + (r.paid ? '<span class="badge badge-paid">paid</span>' : '<span class="badge badge-free">free</span>') + '</td></tr>';
+    });
+    html += '</tbody></table>';
+  }
+
+  panel.innerHTML = html;
 }
 
 if (gt()) { show(); load(); }

@@ -3,7 +3,7 @@ import { cors } from "hono/cors";
 import { bearerAuth } from "hono/bearer-auth";
 import { setCookie, getCookie, deleteCookie } from "hono/cookie";
 import { resolve, join } from "path";
-import db, { getRevenueByApi, getTotalRevenue, getRequestCount, getErrorRate, getApiRevenue, getRecentRequests, getActiveApis, getDailyRevenue, getDailyRequests, getHourlyRequests, getAuditLog, getWalletSummaries, getAllSpendCaps, upsertSpendCap, deleteSpendCap, getWalletSpend, getSpendCap, getApiDetailedStats } from "../../shared/db";
+import db, { getRevenueByApi, getTotalRevenue, getRequestCount, getErrorRate, getApiRevenue, getRecentRequests, getActiveApis, getDailyRevenue, getDailyRequests, getHourlyRequests, getAuditLog, getWalletSummaries, getAllSpendCaps, upsertSpendCap, deleteSpendCap, getWalletSpend, getSpendCap, getApiDetailedStats, getApiRequests, getApiErrors, getApiStatusBreakdown } from "../../shared/db";
 import { WALLET_ADDRESS } from "../../shared/x402";
 import { rateLimit } from "../../shared/rate-limit";
 import { hashPassword, verifyPassword, createSession, getSession, deleteSession, deleteUserSessions, refreshSessionExpiry, logAuthEvent } from "../../shared/auth";
@@ -1552,6 +1552,28 @@ app.get("/api/stats", (c) => {
     chart_range: range,
     wallet: WALLET_ADDRESS,
     timestamp: new Date().toISOString(),
+  });
+});
+
+// --- Per-API Detail ---
+app.get("/api/api-detail", (c) => {
+  const name = c.req.query("name");
+  if (!name || name.length > 64) return c.json({ error: "Invalid API name" }, 400);
+  const range = c.req.query("range") || "24h";
+  const days = range === "24h" ? 1 : range === "all" ? 365 : parseInt(range) || 1;
+
+  const statusBreakdown = getApiStatusBreakdown(name, days);
+  const errors = getApiErrors(name, days, 50);
+  const recentRequests = getApiRequests(name, days, 100);
+  const detailed = getApiDetailedStats(name);
+
+  return c.json({
+    name,
+    range,
+    status_breakdown: statusBreakdown,
+    errors,
+    recent_requests: recentRequests,
+    stats: detailed,
   });
 });
 
