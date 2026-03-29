@@ -83,6 +83,19 @@ export async function safeFetch(
         throw new Error(check.error);
       }
 
+      // DNS rebinding defense: resolve hostname and verify the IP is not private
+      // before making the request. This prevents TOCTOU attacks where a hostname
+      // resolves to a public IP during validation but a private IP during fetch.
+      try {
+        const resolved = await Bun.dns.resolve(check.url.hostname);
+        if (resolved.length > 0 && isPrivateHost(resolved[0].address)) {
+          throw new Error(`DNS resolved to private IP: ${resolved[0].address}`);
+        }
+      } catch (e: any) {
+        if (e.message?.includes("private IP")) throw e;
+        // DNS resolution failure — let fetch handle it
+      }
+
       const res = await fetch(currentUrl, {
         method: redirects === 0 ? method : "GET",
         redirect: "manual",

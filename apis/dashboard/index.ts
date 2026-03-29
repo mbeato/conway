@@ -336,7 +336,7 @@ app.get("/wallet/:address/history", walletLimit, (c) => {
   });
 });
 
-app.put("/wallet/:address/cap", walletLimit, async (c) => {
+app.put("/wallet/:address/cap", walletLimit, bearerAuth({ token: DASHBOARD_TOKEN }), async (c) => {
   const addr = c.req.param("address");
   if (!addr || !WALLET_RE.test(addr)) {
     return c.json({ error: "Invalid wallet address" }, 400);

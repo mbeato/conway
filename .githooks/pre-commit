@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Pre-commit hook: block commits containing secrets
+
+PATTERNS=(
+  'sk_live_[a-zA-Z0-9]{20,}'
+  'sk_test_[a-zA-Z0-9]{20,}'
+  'cnwy_k_[a-zA-Z0-9]{10,}'
+  're_[a-zA-Z0-9]{20,}'
+  'whsec_[a-zA-Z0-9]{20,}'
+  'OPENAI_API_KEY=[a-zA-Z0-9]'
+  'ANTHROPIC_API_KEY=[a-zA-Z0-9]'
+  'STRIPE_SECRET_KEY=sk_'
+  'RESEND_API_KEY=re_[A-Z]'
+  'CDP_API_KEY_SECRET=[a-zA-Z0-9]'
+  '"0x[0-9a-fA-F]{64}"'
+)
+
+# Exclude this hook file from the scan (it contains the patterns as strings)
+STAGED=$(git diff --cached --diff-filter=ACMR -U0 -- ':!.githooks/')
+
+for pattern in "${PATTERNS[@]}"; do
+  if echo "$STAGED" | grep -qE "$pattern"; then
+    echo "BLOCKED: staged changes match secret pattern: $pattern"
+    echo "If this is a false positive (placeholder/example), use: git commit --no-verify"
+    exit 1
+  fi
+done
