@@ -158,6 +158,16 @@ Technical requirements:
 8. Supports both x402 and MPP payment protocols
 9. Split code into multiple files: index.ts (routing + middleware) and one or more helper files (business logic, types, utilities)
 
+CRITICAL error handling rules (follow these EXACTLY):
+- All safeFetch/fetch calls MUST use timeoutMs of at least 10000 (10 seconds). HEAD requests can use 8000.
+- NEVER return a generic "Failed to ..." error without the actual error message.
+- In EVERY catch block that handles fetch/network errors, use this exact pattern:
+  const msg = e instanceof Error ? e.message : String(e);
+  const status = /timeout|timed out|abort/i.test(msg) ? 504 : 502;
+  return c.json({ error: "Analysis temporarily unavailable", detail: msg }, status);
+- Timeouts MUST return 504 (Gateway Timeout), not 502 or 500.
+- Preview endpoints are FREE and are the first thing potential users try. They MUST be reliable. Use generous timeouts (15-20s) on preview endpoints.
+
 EXACT middleware ordering (follow this precisely):
 1. cors() open to all origins — app.use("*", cors({ origin: "*", ... }))
 2. /health endpoint (before rate limiting) — app.get("/health", ...)
