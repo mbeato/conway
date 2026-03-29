@@ -1,12 +1,26 @@
 # APIMesh
 
-20 x402-payable API tools for AI agents. Pay per call with USDC on Base.
+[![APIs](https://img.shields.io/badge/APIs-22%2B-brightgreen)](https://apimesh.xyz)
+[![MCP Tools](https://img.shields.io/badge/MCP%20tools-22-blue)](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server)
+[![npm](https://img.shields.io/npm/v/@mbeato/apimesh-mcp-server)](https://www.npmjs.com/package/@mbeato/apimesh-mcp-server)
+[![Payments](https://img.shields.io/badge/payments-x402%20%7C%20MPP%20%7C%20API%20key-orange)](#payments)
+
+22+ pay-per-call web analysis APIs for AI agents and developers. Security audits, tech stack detection, email verification, SEO analysis, and more.
 
 ## What is this?
 
-APIMesh is a collection of web analysis APIs designed for AI agents. Every endpoint uses the [x402 payment protocol](https://www.x402.org/) — agents pay per call with USDC on Base (no API keys, no subscriptions, no accounts).
+APIMesh is an autonomous API mesh that builds and deploys web analysis APIs. Every endpoint supports three payment methods:
+
+- **[x402](https://www.x402.org/)** -- pay per call with USDC on Base (no signup needed)
+- **[MPP](https://mpp.dev)** -- Stripe's Machine Payments Protocol (cards + stablecoins)
+- **API key + credits** -- traditional auth via [Stripe checkout](https://apimesh.xyz/signup)
 
 Most tools have **free `/preview` endpoints** so agents can verify the API works before paying.
+
+**MCP Server**: Install as an MCP tool for Claude, Cursor, Cline, or any MCP client:
+```bash
+npm install @mbeato/apimesh-mcp-server
+```
 
 ## Tools
 
