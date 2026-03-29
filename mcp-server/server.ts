@@ -109,7 +109,7 @@ function qs(params: Record<string, string | number | undefined>): string {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "apimesh",
-    version: "1.5.0",
+    version: "1.6.0",
   });
 
   server.tool(
@@ -238,6 +238,36 @@ export function createServer(): McpServer {
     { address: z.string().describe("Your 0x wallet address (e.g. 0xabc...def)") },
     async ({ address }) =>
       callApi(`https://apimesh.xyz/wallet/${encodeURIComponent(address)}`),
+  );
+
+  server.tool(
+    "web_resource_validator",
+    "Validate presence and correctness of common web resources (robots.txt, sitemap.xml, openapi.json, agent.json) for any domain. Returns availability status for the requested resource.",
+    {
+      url: z.string().describe("The website URL to validate resources for (e.g. https://example.com)"),
+      resource: z.enum(["robots.txt", "sitemap.xml", "openapi.json", "agent.json"]).describe("The web resource to validate"),
+    },
+    async ({ url, resource }) =>
+      callApi(`https://web-resource-validator.apimesh.xyz/validate${qs({ url, resource })}`),
+  );
+
+  server.tool(
+    "website_security_header_info",
+    "Analyze security-related HTTP headers for any website. Checks Content-Security-Policy, Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, Referrer-Policy, and Permissions-Policy with issue detection.",
+    { url: z.string().describe("The website URL to analyze (e.g. https://example.com)") },
+    async ({ url }) =>
+      callApi(`https://website-security-header-info.apimesh.xyz/?url=${encodeURIComponent(url)}`),
+  );
+
+  server.tool(
+    "website_vulnerability_scan",
+    "Comprehensive website security audit combining hostname analysis, SSL certificate validation, HTTP security headers, cookie security, and Content Security Policy analysis. Returns an overall security score (0-100) with actionable recommendations. Supports basic, detailed, and full scan levels.",
+    {
+      url: z.string().describe("The website URL to scan (e.g. https://example.com)"),
+      level: z.enum(["basic", "detailed", "full"]).optional().describe("Scan detail level (default: full)"),
+    },
+    async ({ url, level }) =>
+      callApi(`https://website-vulnerability-scan.apimesh.xyz/scan${qs({ url, level })}`),
   );
 
   server.tool(
