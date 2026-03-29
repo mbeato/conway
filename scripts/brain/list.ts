@@ -245,6 +245,21 @@ ${toolDocs}
   }
   console.log(`[list] Wrote smithery schemas`);
 
+  // 6. Update landing page counts
+  const landingPath = join(APIS_DIR, "landing/landing.html");
+  try {
+    let landing = await Bun.file(landingPath).text();
+    const count = String(details.length);
+    // Replace all tool/endpoint counts (matches "N tools" and "N endpoints" patterns)
+    landing = landing.replace(/\d+ tools live on Base/, `${count} tools live on Base`);
+    landing = landing.replace(/\d+ endpoints/, `${count} endpoints`);
+    landing = landing.replace(/"\d+ web analysis APIs/, `"${count} web analysis APIs`);
+    await Bun.write(landingPath, landing);
+    console.log(`[list] Updated landing page counts to ${count}`);
+  } catch {
+    console.log(`[list] Landing page not found, skipping`);
+  }
+
   console.log("[list] Done");
 }
 
