@@ -3,7 +3,7 @@
   "name": "apimesh-tech-stack",
   "title": "Website Technology Stack Detector",
   "description": "Detect website technology stack including CMS, frameworks, languages, analytics, CDN, hosting, JavaScript libraries, and CSS frameworks from HTTP headers and HTML analysis.",
-  "version": "1.0.0",
+  "version": "1.0",
   "input": {
     "schemaVersion": 1,
     "title": "Input",
@@ -12,7 +12,8 @@
       "url": {
         "title": "URL to analyze",
         "type": "string",
-        "description": "The website URL to analyze for technology stack (e.g. https://example.com)"
+        "description": "The website URL to analyze for technology stack (e.g. https://example.com)",
+        "editor": "textfield"
       }
     },
     "required": ["url"]

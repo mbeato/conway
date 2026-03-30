@@ -1,0 +1,21 @@
+{
+  "actorSpecification": 1,
+  "name": "apimesh-core-web-vitals",
+  "title": "Core Web Vitals & Performance Audit",
+  "description": "Google PageSpeed Insights analysis — Lighthouse performance, accessibility, SEO scores, plus LCP, CLS, INP field data from Chrome UX Report.",
+  "version": "1.0",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Input",
+    "type": "object",
+    "properties": {
+      "url": {
+        "title": "URL to audit",
+        "type": "string",
+        "description": "URL to analyze performance for (e.g. https://example.com)",
+        "editor": "textfield"
+      }
+    },
+    "required": ["url"]
+  }
+}

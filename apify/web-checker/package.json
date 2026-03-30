@@ -1,0 +1,9 @@
+{
+  "name": "apimesh-web-checker",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "main.ts",
+  "dependencies": {
+    "apify": "^3.7.0"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "actorSpecification": 1,
+  "name": "apimesh-seo-audit",
+  "title": "SEO Audit & Analysis",
+  "description": "On-page SEO analysis with scoring — title, meta descriptions, headings, images, links, OG tags, JSON-LD. Returns 0-100 score with actionable recommendations.",
+  "version": "1.0",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Input",
+    "type": "object",
+    "properties": {
+      "url": {
+        "title": "URL to audit",
+        "type": "string",
+        "description": "URL to perform SEO audit on (e.g. https://example.com)",
+        "editor": "textfield"
+      }
+    },
+    "required": ["url"]
+  }
+}

@@ -1,5 +1,4 @@
 import { Actor } from "apify";
-import { callApi } from "../shared/client";
 
 interface Input {
   url: string;
@@ -12,9 +11,12 @@ if (!input?.url) {
   throw new Error("Missing required input: url");
 }
 
-const result = await callApi("tech-stack", "/check", { url: input.url });
+const url = `https://tech-stack.apimesh.xyz/preview?url=${encodeURIComponent(input.url)}`;
+const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+if (!res.ok) {
+  throw new Error(`APIMesh returned ${res.status}: ${await res.text()}`);
+}
+const result = await res.json();
 
-await Actor.charge({ eventName: "check", count: 1 });
 await Actor.pushData(result);
-
 await Actor.exit();

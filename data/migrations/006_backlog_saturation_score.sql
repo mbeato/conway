@@ -1,2 +1,3 @@
 -- Migration 006: Add saturation_score to backlog
-ALTER TABLE backlog ADD COLUMN saturation_score REAL DEFAULT 0;
+-- No-op: column was added via direct ALTER TABLE before migration system ran
+SELECT 1;

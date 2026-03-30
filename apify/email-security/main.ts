@@ -1,18 +1,18 @@
 import { Actor } from "apify";
 
 interface Input {
-  name: string;
+  domain: string;
 }
 
 await Actor.init();
 
 const input = await Actor.getInput<Input>();
-if (!input?.name) {
-  throw new Error("Missing required input: name (brand/product name to check)");
+if (!input?.domain) {
+  throw new Error("Missing required input: domain (e.g. example.com)");
 }
 
-// Call APIMesh web-checker API using free preview endpoint
-const url = `https://check.apimesh.xyz/preview?name=${encodeURIComponent(input.name)}`;
+// Call APIMesh email-security API using free preview endpoint
+const url = `https://email-security.apimesh.xyz/preview?domain=${encodeURIComponent(input.domain)}`;
 const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
 if (!res.ok) {
   throw new Error(`APIMesh returned ${res.status}: ${await res.text()}`);

@@ -1,0 +1,21 @@
+{
+  "actorSpecification": 1,
+  "name": "apimesh-email-security",
+  "title": "Email Security Checker (SPF/DKIM/DMARC)",
+  "description": "Validate SPF, DKIM (probes 10 selectors), and DMARC records for any domain. Detects email provider, checks MX records, and grades overall email security posture.",
+  "version": "1.0",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Input",
+    "type": "object",
+    "properties": {
+      "domain": {
+        "title": "Domain to check",
+        "type": "string",
+        "description": "Domain to check (e.g. example.com)",
+        "editor": "textfield"
+      }
+    },
+    "required": ["domain"]
+  }
+}

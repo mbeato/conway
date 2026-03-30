@@ -1,5 +1,4 @@
 import { Actor } from "apify";
-import { callApi } from "../shared/client";
 
 interface Input {
   email: string;
@@ -12,9 +11,12 @@ if (!input?.email) {
   throw new Error("Missing required input: email");
 }
 
-const result = await callApi("email-verify", "/check", { email: input.email });
+const url = `https://email-verify.apimesh.xyz/preview?email=${encodeURIComponent(input.email)}`;
+const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+if (!res.ok) {
+  throw new Error(`APIMesh returned ${res.status}: ${await res.text()}`);
+}
+const result = await res.json();
 
-await Actor.charge({ eventName: "check", count: 1 });
 await Actor.pushData(result);
-
 await Actor.exit();

@@ -1,0 +1,21 @@
+{
+  "actorSpecification": 1,
+  "name": "apimesh-security-headers",
+  "title": "HTTP Security Headers Audit",
+  "description": "Audit 10 HTTP security headers with A+ to F grading. Checks CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, and more.",
+  "version": "1.0",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Input",
+    "type": "object",
+    "properties": {
+      "url": {
+        "title": "URL to audit",
+        "type": "string",
+        "description": "URL to audit security headers for (e.g. https://example.com)",
+        "editor": "textfield"
+      }
+    },
+    "required": ["url"]
+  }
+}
