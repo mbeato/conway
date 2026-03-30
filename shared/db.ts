@@ -131,12 +131,13 @@ export function insertBacklogItem(
   demandScore: number,
   effortScore: number,
   competitionScore: number,
-  overallScore: number
+  overallScore: number,
+  saturationScore: number = 0
 ) {
   db.run(
-    `INSERT OR IGNORE INTO backlog (name, description, demand_score, effort_score, competition_score, overall_score)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [name, description, demandScore, effortScore, competitionScore, overallScore]
+    `INSERT OR IGNORE INTO backlog (name, description, demand_score, effort_score, competition_score, overall_score, saturation_score)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [name, description, demandScore, effortScore, competitionScore, overallScore, saturationScore]
   );
 }
 
