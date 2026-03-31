@@ -1,12 +1,13 @@
 {
   "name": "web-checker",
-  "description": "web-checker API",
-  "url": "https://check.apimesh.xyz",
+  "description": "Check brand/product name availability across 5 TLDs (.com, .io, .dev, .app, .xyz), GitHub, npm, PyPI, and Reddit in one call.",
+  "url": "https://web-checker.apimesh.xyz",
   "protocol": "x402",
+  "price": "$0.005",
   "tools": [
     {
       "name": "web-checker",
-      "description": "web-checker API",
+      "description": "Check brand/product name availability across 5 TLDs (.com, .io, .dev, .app, .xyz), GitHub, npm, PyPI, and Reddit in one call.",
       "inputSchema": {
         "type": "object",
         "properties": {}

@@ -1,0 +1,204 @@
+{
+  "version": "1.0",
+  "provider": "APIMesh (apimesh.xyz)",
+  "description": "23 pay-per-call web analysis APIs for AI agents. Supports x402, MPP, and API key payments.",
+  "updated_at": "2026-03-31T01:27:57.623Z",
+  "network": "eip155:8453",
+  "apis": [
+    {
+      "name": "email-verify",
+      "url": "https://email-verify.apimesh.xyz",
+      "description": "Verify email addresses — syntax, MX record check, disposable domain detection, role-address detection, and deliverability assessment.",
+      "price": "$0.001",
+      "protocol": "x402",
+      "health": "https://email-verify.apimesh.xyz/health",
+      "preview": "https://email-verify.apimesh.xyz/preview"
+    },
+    {
+      "name": "tech-stack",
+      "url": "https://tech-stack.apimesh.xyz",
+      "description": "Detect website technology stack — CMS, frameworks, analytics, CDN, hosting, JS libraries, and CSS frameworks from headers and HTML.",
+      "price": "$0.003",
+      "protocol": "x402",
+      "health": "https://tech-stack.apimesh.xyz/health",
+      "preview": "https://tech-stack.apimesh.xyz/preview"
+    },
+    {
+      "name": "mock-jwt-generator",
+      "url": "https://mock-jwt-generator.apimesh.xyz",
+      "description": "mock-jwt-generator API",
+      "price": "$0.001",
+      "protocol": "x402",
+      "health": "https://mock-jwt-generator.apimesh.xyz/health"
+    },
+    {
+      "name": "email-security",
+      "url": "https://email-security.apimesh.xyz",
+      "description": "Validate SPF, DKIM (probes 10 common selectors), and DMARC records for any domain. Detects email provider and grades overall email security.",
+      "price": "$0.01",
+      "protocol": "x402",
+      "health": "https://email-security.apimesh.xyz/health",
+      "preview": "https://email-security.apimesh.xyz/preview"
+    },
+    {
+      "name": "robots-txt-parser",
+      "url": "https://robots-txt-parser.apimesh.xyz",
+      "description": "Website URL to analyze robots.txt",
+      "price": "$0.002",
+      "protocol": "x402",
+      "health": "https://robots-txt-parser.apimesh.xyz/health"
+    },
+    {
+      "name": "web-checker",
+      "url": "https://web-checker.apimesh.xyz",
+      "description": "Check brand/product name availability across 5 TLDs (.com, .io, .dev, .app, .xyz), GitHub, npm, PyPI, and Reddit in one call.",
+      "price": "$0.005",
+      "protocol": "x402",
+      "health": "https://web-checker.apimesh.xyz/health",
+      "preview": "https://web-checker.apimesh.xyz/preview"
+    },
+    {
+      "name": "seo-audit",
+      "url": "https://seo-audit.apimesh.xyz",
+      "description": "Comprehensive on-page SEO analysis — title, meta, headings, images, links, OG tags, JSON-LD, and robots directives with a 0-100 score.",
+      "price": "$0.003",
+      "protocol": "x402",
+      "health": "https://seo-audit.apimesh.xyz/health",
+      "preview": "https://seo-audit.apimesh.xyz/preview"
+    },
+    {
+      "name": "brand-assets",
+      "url": "https://brand-assets.apimesh.xyz",
+      "description": "Extract brand assets from any domain — logo URL, favicon, theme colors, OG image, and site name.",
+      "price": "$0.002",
+      "protocol": "x402",
+      "health": "https://brand-assets.apimesh.xyz/health",
+      "preview": "https://brand-assets.apimesh.xyz/preview"
+    },
+    {
+      "name": "user-agent-analyzer",
+      "url": "https://user-agent-analyzer.apimesh.xyz",
+      "description": "user-agent-analyzer API",
+      "price": "$0.002",
+      "protocol": "x402",
+      "health": "https://user-agent-analyzer.apimesh.xyz/health"
+    },
+    {
+      "name": "redirect-chain",
+      "url": "https://redirect-chain.apimesh.xyz",
+      "description": "Trace the full HTTP redirect chain for any URL with per-hop status codes, latency, and loop detection.",
+      "price": "$0.001",
+      "protocol": "x402",
+      "health": "https://redirect-chain.apimesh.xyz/health",
+      "preview": "https://redirect-chain.apimesh.xyz/preview"
+    },
+    {
+      "name": "regex-builder",
+      "url": "https://regex-builder.apimesh.xyz",
+      "description": "Provides an interface to construct and test regular expressions.",
+      "price": "$0.005",
+      "protocol": "x402",
+      "health": "https://regex-builder.apimesh.xyz/health"
+    },
+    {
+      "name": "swagger-docs-creator",
+      "url": "https://swagger-docs-creator.apimesh.xyz",
+      "description": "Generate basic Swagger (OpenAPI 3.0.x) documentation for your API endpoint.",
+      "price": "$0.002",
+      "protocol": "x402",
+      "health": "https://swagger-docs-creator.apimesh.xyz/health"
+    },
+    {
+      "name": "core-web-vitals",
+      "url": "https://core-web-vitals.apimesh.xyz",
+      "description": "Google PageSpeed Insights analysis — Lighthouse performance, accessibility, SEO scores plus LCP, CLS, INP field data from Chrome UX Report.",
+      "price": "$0.005",
+      "protocol": "x402",
+      "health": "https://core-web-vitals.apimesh.xyz/health",
+      "preview": "https://core-web-vitals.apimesh.xyz/preview"
+    },
+    {
+      "name": "web-resource-validator",
+      "url": "https://web-resource-validator.apimesh.xyz",
+      "description": "Validate presence and correctness of common web resources like robots.txt, sitemap.xml, openapi.json, agent.json",
+      "price": "$0.001",
+      "protocol": "x402",
+      "health": "https://web-resource-validator.apimesh.xyz/health"
+    },
+    {
+      "name": "status-code-checker",
+      "url": "https://status-code-checker.apimesh.xyz",
+      "description": "Checks the status code of any valid URL, returning accessibility and HTTP response info.",
+      "price": "$0.001",
+      "protocol": "x402",
+      "health": "https://status-code-checker.apimesh.xyz/health"
+    },
+    {
+      "name": "website-security-header-info",
+      "url": "https://website-security-header-info.apimesh.xyz",
+      "description": "website-security-header-info API",
+      "price": "$0.01",
+      "protocol": "x402",
+      "health": "https://website-security-header-info.apimesh.xyz/health"
+    },
+    {
+      "name": "yaml-validator",
+      "url": "https://yaml-validator.apimesh.xyz",
+      "description": "yaml-validator API",
+      "price": "$0.002",
+      "protocol": "x402",
+      "health": "https://yaml-validator.apimesh.xyz/health"
+    },
+    {
+      "name": "favicon-checker",
+      "url": "https://favicon-checker.apimesh.xyz",
+      "description": "favicon-checker API",
+      "price": "$0.002",
+      "protocol": "x402",
+      "health": "https://favicon-checker.apimesh.xyz/health"
+    },
+    {
+      "name": "security-headers",
+      "url": "https://security-headers.apimesh.xyz",
+      "description": "Audit 10 HTTP security headers (CSP, HSTS, X-Frame-Options, etc.) with A+ to F grading and remediation suggestions.",
+      "price": "$0.005",
+      "protocol": "x402",
+      "health": "https://security-headers.apimesh.xyz/health",
+      "preview": "https://security-headers.apimesh.xyz/preview"
+    },
+    {
+      "name": "http-status-checker",
+      "url": "https://http-status-checker.apimesh.xyz",
+      "description": "Checks the HTTP status of a given URL to ensure it is accessible and returns the expected response code.",
+      "price": "$0.002",
+      "protocol": "x402",
+      "health": "https://http-status-checker.apimesh.xyz/health"
+    },
+    {
+      "name": "website-vulnerability-scan",
+      "url": "https://website-vulnerability-scan.apimesh.xyz",
+      "description": "website-vulnerability-scan API",
+      "price": "$0.05",
+      "protocol": "x402",
+      "health": "https://website-vulnerability-scan.apimesh.xyz/health"
+    },
+    {
+      "name": "indexability",
+      "url": "https://indexability.apimesh.xyz",
+      "description": "5-layer indexability analysis — robots.txt, HTTP status, meta robots, X-Robots-Tag, and canonical. Returns whether a URL is indexable.",
+      "price": "$0.001",
+      "protocol": "x402",
+      "health": "https://indexability.apimesh.xyz/health",
+      "preview": "https://indexability.apimesh.xyz/preview"
+    },
+    {
+      "name": "microservice-health-check",
+      "url": "https://microservice-health-check.apimesh.xyz",
+      "description": "microservice-health-check API",
+      "price": "$0.003",
+      "protocol": "x402",
+      "health": "https://microservice-health-check.apimesh.xyz/health",
+      "preview": "https://microservice-health-check.apimesh.xyz/preview"
+    }
+  ]
+}

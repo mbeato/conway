@@ -1,12 +1,13 @@
 {
   "name": "website-security-header-info",
-  "description": "Analyze security-related HTTP headers like Content-Security-Policy, Strict-Transport-Security, etc., for a given website.",
+  "description": "website-security-header-info API",
   "url": "https://website-security-header-info.apimesh.xyz",
   "protocol": "x402",
+  "price": "$0.01",
   "tools": [
     {
       "name": "website-security-header-info",
-      "description": "Analyze security-related HTTP headers like Content-Security-Policy, Strict-Transport-Security, etc., for a given website.",
+      "description": "website-security-header-info API",
       "inputSchema": {
         "type": "object",
         "properties": {}

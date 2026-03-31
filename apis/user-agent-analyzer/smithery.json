@@ -1,12 +1,13 @@
 {
   "name": "user-agent-analyzer",
-  "description": "Analyzes and returns details of a user-agent string to provide insights on browser type and operating system.",
+  "description": "user-agent-analyzer API",
   "url": "https://user-agent-analyzer.apimesh.xyz",
   "protocol": "x402",
+  "price": "$0.002",
   "tools": [
     {
       "name": "user-agent-analyzer",
-      "description": "Analyzes and returns details of a user-agent string to provide insights on browser type and operating system.",
+      "description": "user-agent-analyzer API",
       "inputSchema": {
         "type": "object",
         "properties": {}

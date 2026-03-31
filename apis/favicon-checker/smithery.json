@@ -1,12 +1,13 @@
 {
   "name": "favicon-checker",
-  "description": "Checks if a given URL has a favicon and returns its status and URL.",
+  "description": "favicon-checker API",
   "url": "https://favicon-checker.apimesh.xyz",
   "protocol": "x402",
+  "price": "$0.002",
   "tools": [
     {
       "name": "favicon-checker",
-      "description": "Checks if a given URL has a favicon and returns its status and URL.",
+      "description": "favicon-checker API",
       "inputSchema": {
         "type": "object",
         "properties": {}

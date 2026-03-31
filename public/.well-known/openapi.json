@@ -1,0 +1,134 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "APIMesh",
+    "description": "23 pay-per-call web analysis APIs for AI agents",
+    "version": "2.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://email-verify.apimesh.xyz",
+      "description": "email-verify: Verify email addresses — syntax, MX record check, disposable domain detection, role-address detection, and deliverability assessment."
+    },
+    {
+      "url": "https://tech-stack.apimesh.xyz",
+      "description": "tech-stack: Detect website technology stack — CMS, frameworks, analytics, CDN, hosting, JS libraries, and CSS frameworks from headers and HTML."
+    },
+    {
+      "url": "https://mock-jwt-generator.apimesh.xyz",
+      "description": "mock-jwt-generator: mock-jwt-generator API"
+    },
+    {
+      "url": "https://email-security.apimesh.xyz",
+      "description": "email-security: Validate SPF, DKIM (probes 10 common selectors), and DMARC records for any domain. Detects email provider and grades overall email security."
+    },
+    {
+      "url": "https://robots-txt-parser.apimesh.xyz",
+      "description": "robots-txt-parser: Website URL to analyze robots.txt"
+    },
+    {
+      "url": "https://web-checker.apimesh.xyz",
+      "description": "web-checker: Check brand/product name availability across 5 TLDs (.com, .io, .dev, .app, .xyz), GitHub, npm, PyPI, and Reddit in one call."
+    },
+    {
+      "url": "https://seo-audit.apimesh.xyz",
+      "description": "seo-audit: Comprehensive on-page SEO analysis — title, meta, headings, images, links, OG tags, JSON-LD, and robots directives with a 0-100 score."
+    },
+    {
+      "url": "https://brand-assets.apimesh.xyz",
+      "description": "brand-assets: Extract brand assets from any domain — logo URL, favicon, theme colors, OG image, and site name."
+    },
+    {
+      "url": "https://user-agent-analyzer.apimesh.xyz",
+      "description": "user-agent-analyzer: user-agent-analyzer API"
+    },
+    {
+      "url": "https://redirect-chain.apimesh.xyz",
+      "description": "redirect-chain: Trace the full HTTP redirect chain for any URL with per-hop status codes, latency, and loop detection."
+    },
+    {
+      "url": "https://regex-builder.apimesh.xyz",
+      "description": "regex-builder: Provides an interface to construct and test regular expressions."
+    },
+    {
+      "url": "https://swagger-docs-creator.apimesh.xyz",
+      "description": "swagger-docs-creator: Generate basic Swagger (OpenAPI 3.0.x) documentation for your API endpoint."
+    },
+    {
+      "url": "https://core-web-vitals.apimesh.xyz",
+      "description": "core-web-vitals: Google PageSpeed Insights analysis — Lighthouse performance, accessibility, SEO scores plus LCP, CLS, INP field data from Chrome UX Report."
+    },
+    {
+      "url": "https://web-resource-validator.apimesh.xyz",
+      "description": "web-resource-validator: Validate presence and correctness of common web resources like robots.txt, sitemap.xml, openapi.json, agent.json"
+    },
+    {
+      "url": "https://status-code-checker.apimesh.xyz",
+      "description": "status-code-checker: Checks the status code of any valid URL, returning accessibility and HTTP response info."
+    },
+    {
+      "url": "https://website-security-header-info.apimesh.xyz",
+      "description": "website-security-header-info: website-security-header-info API"
+    },
+    {
+      "url": "https://yaml-validator.apimesh.xyz",
+      "description": "yaml-validator: yaml-validator API"
+    },
+    {
+      "url": "https://favicon-checker.apimesh.xyz",
+      "description": "favicon-checker: favicon-checker API"
+    },
+    {
+      "url": "https://security-headers.apimesh.xyz",
+      "description": "security-headers: Audit 10 HTTP security headers (CSP, HSTS, X-Frame-Options, etc.) with A+ to F grading and remediation suggestions."
+    },
+    {
+      "url": "https://http-status-checker.apimesh.xyz",
+      "description": "http-status-checker: Checks the HTTP status of a given URL to ensure it is accessible and returns the expected response code."
+    },
+    {
+      "url": "https://website-vulnerability-scan.apimesh.xyz",
+      "description": "website-vulnerability-scan: website-vulnerability-scan API"
+    },
+    {
+      "url": "https://indexability.apimesh.xyz",
+      "description": "indexability: 5-layer indexability analysis — robots.txt, HTTP status, meta robots, X-Robots-Tag, and canonical. Returns whether a URL is indexable."
+    },
+    {
+      "url": "https://microservice-health-check.apimesh.xyz",
+      "description": "microservice-health-check: microservice-health-check API"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "API info and available endpoints",
+        "responses": {
+          "200": {
+            "description": "API metadata and pricing"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "responses": {
+          "200": {
+            "description": "Service is healthy"
+          }
+        }
+      }
+    },
+    "/preview": {
+      "get": {
+        "summary": "Free preview — limited results, no payment required",
+        "responses": {
+          "200": {
+            "description": "Preview results"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,12 +1,13 @@
 {
   "name": "microservice-health-check",
-  "description": "Monitors the health status of microservices by checking their response times and availability.",
+  "description": "microservice-health-check API",
   "url": "https://microservice-health-check.apimesh.xyz",
   "protocol": "x402",
+  "price": "$0.003",
   "tools": [
     {
       "name": "microservice-health-check",
-      "description": "Monitors the health status of microservices by checking their response times and availability.",
+      "description": "microservice-health-check API",
       "inputSchema": {
         "type": "object",
         "properties": {}
