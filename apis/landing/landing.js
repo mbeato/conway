@@ -1,174 +1,259 @@
-/* --- Copy to clipboard for install block --- */
-var installBlock = document.querySelector('.install-block');
-if (installBlock) {
-  installBlock.addEventListener('click', function() {
-    navigator.clipboard.writeText('npx @mbeato/apimesh-mcp-server').then(function() {
-      var h = document.querySelector('.copy-hint');
-      h.textContent = 'copied';
-      setTimeout(function() { h.textContent = 'copy'; }, 1500);
-    });
-  });
-}
+/* === APIMesh Landing — Observable Infrastructure === */
 
-/* --- Mesh network animation --- */
+/* --- Copy to clipboard --- */
 (function() {
-  var c = document.getElementById('mesh');
-  var ctx = c.getContext('2d');
-  var dpr = window.devicePixelRatio || 1;
-  var w, h, nodes = [], raf;
-  var CONNECT_DIST = 140;
-  var NODE_COUNT = 40;
-
-  function resize() {
-    var wrap = c.parentElement;
-    w = wrap.offsetWidth;
-    h = wrap.offsetHeight;
-    c.width = w * dpr;
-    c.height = h * dpr;
-    c.style.width = w + 'px';
-    c.style.height = h + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  function init() {
-    resize();
-    nodes = [];
-    for (var i = 0; i < NODE_COUNT; i++) {
-      nodes.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        r: 1.5 + Math.random() * 1,
-        pulse: Math.random() * Math.PI * 2,
-        active: Math.random() < 0.15
+  var block = document.getElementById('install-block');
+  var btn = document.getElementById('copy-btn');
+  if (!block || !btn) return;
+  block.addEventListener('click', function() {
+    try {
+      navigator.clipboard.writeText('npx @mbeato/apimesh-mcp-server').then(function() {
+        btn.textContent = 'copied';
+        setTimeout(function() { btn.textContent = 'copy'; }, 1500);
+      }).catch(function() {
+        btn.textContent = 'failed';
+        setTimeout(function() { btn.textContent = 'copy'; }, 1500);
       });
+    } catch (e) {
+      // Fallback for non-secure contexts
+      var ta = document.createElement('textarea');
+      ta.value = 'npx @mbeato/apimesh-mcp-server';
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      btn.textContent = 'copied';
+      setTimeout(function() { btn.textContent = 'copy'; }, 1500);
     }
-  }
-
-  function draw() {
-    ctx.clearRect(0, 0, w, h);
-
-    /* Draw connections */
-    for (var i = 0; i < nodes.length; i++) {
-      for (var j = i + 1; j < nodes.length; j++) {
-        var dx = nodes[i].x - nodes[j].x;
-        var dy = nodes[i].y - nodes[j].y;
-        var dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < CONNECT_DIST) {
-          var alpha = (1 - dist / CONNECT_DIST) * 0.12;
-          ctx.strokeStyle = 'rgba(255,255,255,' + alpha + ')';
-          ctx.lineWidth = 0.5;
-          ctx.beginPath();
-          ctx.moveTo(nodes[i].x, nodes[i].y);
-          ctx.lineTo(nodes[j].x, nodes[j].y);
-          ctx.stroke();
-        }
-      }
-    }
-
-    /* Draw nodes */
-    var t = Date.now() * 0.001;
-    for (var k = 0; k < nodes.length; k++) {
-      var n = nodes[k];
-      var glow = n.active ? 0.15 + Math.sin(t * 1.5 + n.pulse) * 0.1 : 0;
-
-      /* Active node glow */
-      if (n.active) {
-        ctx.fillStyle = 'rgba(61,220,132,' + glow + ')';
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, 8, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      /* Node dot */
-      var nodeAlpha = n.active ? 0.6 : 0.2;
-      ctx.fillStyle = n.active ? 'rgba(61,220,132,' + nodeAlpha + ')' : 'rgba(255,255,255,' + nodeAlpha + ')';
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    /* Occasionally toggle active states */
-    if (Math.random() < 0.005) {
-      var ri = Math.floor(Math.random() * nodes.length);
-      nodes[ri].active = !nodes[ri].active;
-    }
-
-    /* Update positions */
-    for (var m = 0; m < nodes.length; m++) {
-      var nd = nodes[m];
-      nd.x += nd.vx;
-      nd.y += nd.vy;
-      if (nd.x < 0 || nd.x > w) nd.vx *= -1;
-      if (nd.y < 0 || nd.y > h) nd.vy *= -1;
-      nd.x = Math.max(0, Math.min(w, nd.x));
-      nd.y = Math.max(0, Math.min(h, nd.y));
-    }
-
-    raf = requestAnimationFrame(draw);
-  }
-
-  init();
-  draw();
-  window.addEventListener('resize', function() { resize(); });
-
-  /* Pause when not visible */
-  document.addEventListener('visibilitychange', function() {
-    if (document.hidden) { cancelAnimationFrame(raf); }
-    else { draw(); }
   });
 })();
 
-/* --- Scroll reveal --- */
-var observer = new IntersectionObserver(function(entries) {
-  entries.forEach(function(entry) {
-    if (entry.isIntersecting) {
-      entry.target.classList.add('visible');
-      /* Trigger code typing when code block enters view */
-      if (entry.target.querySelector('#code-typed')) typeCode();
+/* --- Terminal typing animation --- */
+(function() {
+  var el = document.getElementById('terminal-output');
+  if (!el) return;
+
+  var cycles = [
+    { text: '  scanning backlog...', cls: 't-dim' },
+    { text: '  \u2192 found: website-vulnerability-scan', cls: 't-text' },
+    { text: '  building API...', cls: 't-accent' },
+    { text: '  \u2192 generated routes, validation, openapi spec', cls: 't-dim' },
+    { text: '  \u2192 pricing: $0.005/call, x402 + MPP + API key', cls: 't-dim' },
+    { text: '  running security audit...', cls: 't-accent' },
+    { text: '  \u2192 14 rules checked', cls: 't-dim' },
+    { text: '  \u2192 0 critical, 0 high, 2 info', cls: 't-text' },
+    { text: '  deploying to staging...', cls: 't-green' },
+    { text: '  \u2192 integration tests passed (4/4)', cls: 't-dim' },
+    { text: '  promoting to production \u2713', cls: 't-green' },
+    { text: '  \u2192 live at vulnerability-scan.apimesh.xyz', cls: 't-text' },
+  ];
+
+  var lineIndex = 0;
+  var charIndex = 0;
+  var lines = [];
+  var cursor = '<span class="terminal-cursor"></span>';
+  var timer = null;
+  var paused = false;
+
+  function render() {
+    var html = '';
+    for (var i = 0; i < lines.length; i++) {
+      html += lines[i] + '\n';
     }
-  });
-}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+    if (lineIndex < cycles.length) {
+      var c = cycles[lineIndex];
+      var partial = c.text.substring(0, charIndex);
+      html += '<span class="' + c.cls + '">' + partial + '</span>' + cursor;
+    } else {
+      html += cursor;
+    }
+    el.innerHTML = html;
+    el.scrollTop = el.scrollHeight;
+  }
 
-document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+  function typeChar() {
+    if (paused) return;
 
-/* --- Code typing animation --- */
-var codeLines = [
-  '{',
-  '  <span class="key">"url"</span>: <span class="str">"https://example.com"</span>,',
-  '  <span class="key">"score"</span>: <span class="num">72</span>,',
-  '  <span class="key">"grade"</span>: <span class="str">"B"</span>,',
-  '  <span class="key">"headers"</span>: {',
-  '    <span class="key">"strict-transport-security"</span>: <span class="bool">true</span>,',
-  '    <span class="key">"content-security-policy"</span>: <span class="bool">false</span>,',
-  '    <span class="key">"x-frame-options"</span>: <span class="bool">true</span>',
-  '  },',
-  '  <span class="key">"x402"</span>: { <span class="key">"paid"</span>: <span class="num">0.005</span>, <span class="key">"currency"</span>: <span class="str">"USDC"</span> }',
-  '}'
-];
-var codeTyped = false;
-
-function typeCode() {
-  if (codeTyped) return;
-  codeTyped = true;
-  var el = document.getElementById('code-typed');
-  var i = 0;
-  var out = '';
-
-  function nextLine() {
-    if (i >= codeLines.length) {
-      el.innerHTML = out;
-      el.classList.add('typed');
+    if (lineIndex >= cycles.length) {
+      render();
+      timer = setTimeout(function() {
+        lines = [];
+        lineIndex = 0;
+        charIndex = 0;
+        typeChar();
+      }, 4000);
       return;
     }
-    out += (i > 0 ? '\n' : '') + codeLines[i];
-    el.innerHTML = out + '<span class="code-cursor"></span>';
-    i++;
-    setTimeout(nextLine, 60 + Math.random() * 40);
+
+    var c = cycles[lineIndex];
+    if (charIndex <= c.text.length) {
+      render();
+      charIndex++;
+      var speed = 22 + Math.random() * 18;
+      if (charIndex === 1) speed = 200 + Math.random() * 100;
+      timer = setTimeout(typeChar, speed);
+    } else {
+      lines.push('<span class="' + c.cls + '">' + c.text + '</span>');
+      lineIndex++;
+      charIndex = 0;
+      timer = setTimeout(typeChar, 80);
+    }
   }
-  nextLine();
-}
+
+  // Pause when tab not visible
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      paused = true;
+      clearTimeout(timer);
+    } else {
+      paused = false;
+      typeChar();
+    }
+  });
+
+  timer = setTimeout(typeChar, 600);
+})();
+
+/* --- Number ticker --- */
+(function() {
+  var ticked = false;
+
+  function easeOut(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function formatNum(n) {
+    if (n >= 1000) return n.toLocaleString();
+    return String(n);
+  }
+
+  // Exposed so the tools fetch can trigger it after updating data-target
+  window._runTicker = function() {
+    var targets = document.querySelectorAll('[data-target]');
+    if (ticked) {
+      // Re-animate with updated targets
+      targets.forEach(function(el) {
+        var target = parseInt(el.getAttribute('data-target'), 10);
+        if (!target || target === 0) return;
+        var start = performance.now();
+        var duration = 1500;
+        function step(now) {
+          var t = Math.min((now - start) / duration, 1);
+          var val = Math.round(easeOut(t) * target);
+          el.textContent = formatNum(val);
+          if (t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      });
+      return;
+    }
+    ticked = true;
+    targets.forEach(function(el) {
+      var target = parseInt(el.getAttribute('data-target'), 10);
+      if (!target || target === 0) return;
+      var start = performance.now();
+      var duration = 1500;
+      function step(now) {
+        var t = Math.min((now - start) / duration, 1);
+        var val = Math.round(easeOut(t) * target);
+        el.textContent = formatNum(val);
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    });
+  };
+
+  var obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      if (e.isIntersecting) {
+        window._runTicker();
+        obs.disconnect();
+      }
+    });
+  }, { threshold: 0.3 });
+
+  var ticker = document.querySelector('.stats-ticker');
+  if (ticker) obs.observe(ticker);
+})();
+
+/* --- Marquee + dynamic tools --- */
+(function() {
+  var row1 = document.getElementById('marquee-row-1');
+  var row2 = document.getElementById('marquee-row-2');
+  var countEl = document.getElementById('tools-count');
+  var statApis = document.getElementById('stat-apis');
+  var statRequests = document.getElementById('stat-requests');
+
+  function makePill(t) {
+    var name = t.name.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+    return '<a class="marquee-pill" href="https://' + t.subdomain + '.apimesh.xyz" target="_blank" rel="noopener noreferrer">' +
+      name + ' <span class="pill-price">\u00b7 ' + t.price + '</span></a>';
+  }
+
+  fetch('/api/tools')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (countEl) countEl.textContent = data.count + ' live';
+      if (statApis) statApis.setAttribute('data-target', String(data.count));
+
+      // Sum total requests for stats ticker
+      var totalReqs = 0;
+      data.tools.forEach(function(t) {
+        if (t.total_requests) totalReqs += t.total_requests;
+      });
+      if (statRequests && totalReqs > 0) {
+        statRequests.setAttribute('data-target', String(totalReqs));
+      }
+
+      // Re-trigger ticker animation with real data
+      if (window._runTicker) window._runTicker();
+
+      // Split tools into two groups
+      var group1 = [], group2 = [];
+      data.tools.forEach(function(t, i) {
+        if (i % 2 === 0) group1.push(t);
+        else group2.push(t);
+      });
+
+      // Build pills — duplicated for seamless loop
+      var html1 = group1.map(makePill).join('');
+      var html2 = group2.map(makePill).join('');
+      if (row1) row1.innerHTML = html1 + html1;
+      if (row2) row2.innerHTML = html2 + html2;
+    })
+    .catch(function() {
+      if (countEl) countEl.textContent = '';
+    });
+})();
+
+/* --- Scroll-velocity marquee effect --- */
+(function() {
+  var tracks = document.querySelectorAll('.marquee-track');
+  if (!tracks.length) return;
+  var lastScroll = window.scrollY;
+  var baseSpeed = [120, 100]; // match CSS durations
+  var resetTimer;
+
+  function onScroll() {
+    var delta = Math.abs(window.scrollY - lastScroll);
+    lastScroll = window.scrollY;
+    // Speed up marquee during fast scroll (lower duration = faster)
+    var speedFactor = Math.max(0.4, 1 - delta * 0.008);
+    tracks.forEach(function(track, i) {
+      track.style.animationDuration = (baseSpeed[i] * speedFactor) + 's';
+    });
+    clearTimeout(resetTimer);
+    resetTimer = setTimeout(function() {
+      tracks.forEach(function(track, i) {
+        track.style.animationDuration = baseSpeed[i] + 's';
+      });
+    }, 400);
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+})();
 
 /* --- Smooth scroll for nav links --- */
 document.querySelectorAll('a[href^="#"]').forEach(function(a) {
@@ -177,34 +262,19 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a) {
     if (target) {
       e.preventDefault();
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      var links = document.getElementById('nav-links');
+      if (links) links.classList.remove('open');
     }
   });
 });
 
-/* --- Dynamic tool grid --- */
+/* --- Mobile hamburger --- */
 (function() {
-  fetch('/api/tools')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      var grid = document.getElementById('tool-grid');
-      var count = document.querySelector('.section-count');
-      if (count) count.textContent = data.count + ' endpoints';
-      // Update hero count
-      var heroLabel = document.querySelector('.hero-label');
-      if (heroLabel) heroLabel.innerHTML = '<span class="dot"></span> ' + data.count + ' tools live on Base';
-
-      grid.innerHTML = data.tools.map(function(t) {
-        var name = t.name.replace(/-/g, ' ').replace(/\b\w/g, function(c) { return c.toUpperCase(); });
-        var desc = t.description;
-        if (desc.length > 80) desc = desc.substring(0, 77) + '...';
-        return '<a href="https://' + t.subdomain + '.apimesh.xyz" target="_blank" class="tool stagger" style="text-decoration:none;color:inherit">' +
-          '<div class="tool-header">' +
-            '<span class="tool-name">' + name + '</span>' +
-            '<span class="tool-price">' + t.price + '</span>' +
-          '</div>' +
-          '<div class="tool-desc">' + desc + '</div>' +
-        '</a>';
-      }).join('');
-    })
-    .catch(function() {});
+  var toggle = document.getElementById('nav-toggle');
+  var links = document.getElementById('nav-links');
+  if (!toggle || !links) return;
+  toggle.addEventListener('click', function() {
+    links.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', String(links.classList.contains('open')));
+  });
 })();

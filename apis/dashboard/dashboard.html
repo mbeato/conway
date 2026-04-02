@@ -5,21 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>APIMesh</title>
     <link rel="icon" type="image/svg+xml" href="/logo-nav.svg" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <style>
+      :root {
+        --bg: #0a0a0a;
+        --surface: #111111;
+        --border: #1c1c1c;
+        --border-hover: #2a2a2a;
+        --text: #e0e0e0;
+        --text-secondary: #777;
+        --text-dim: #555;
+        --accent: #3ddc84;
+        --accent-dim: rgba(61, 220, 132, 0.08);
+        --danger: #ef4444;
+        --sans: "DM Sans", -apple-system, sans-serif;
+        --mono: "JetBrains Mono", "SF Mono", monospace;
+      }
+
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
       body {
-        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-        background: #0a0a0a;
-        color: #ededed;
+        font-family: var(--sans);
+        background: var(--bg);
+        color: var(--text);
         min-height: 100vh;
         -webkit-font-smoothing: antialiased;
         font-size: 14px;
         line-height: 1.5;
       }
 
-      a { color: #ededed; text-decoration: none; }
+      a { color: var(--text); text-decoration: none; }
       a:hover { color: #fff; }
 
       /* --- Login --- */
@@ -27,7 +42,7 @@
         position: fixed;
         inset: 0;
         z-index: 100;
-        background: #0a0a0a;
+        background: var(--bg);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -44,31 +59,31 @@
       .login-box h1 {
         font-size: 16px;
         font-weight: 600;
-        color: #ededed;
+        color: var(--text);
         margin-bottom: 8px;
       }
       .login-box input {
         width: 100%;
         padding: 10px 12px;
-        background: #0a0a0a;
-        border: 1px solid #333;
-        border-radius: 6px;
-        color: #ededed;
-        font-family: inherit;
+        background: var(--bg);
+        border: 1px solid var(--border-hover);
+        border-radius: 0;
+        color: var(--text);
+        font-family: var(--sans);
         font-size: 14px;
         outline: none;
         transition: border-color 0.15s;
       }
-      .login-box input:focus { border-color: #ededed; }
-      .login-box input::placeholder { color: #666; }
+      .login-box input:focus { border-color: var(--text); }
+      .login-box input::placeholder { color: var(--text-secondary); }
 
       .btn {
         padding: 10px 16px;
-        background: #ededed;
-        color: #0a0a0a;
+        background: var(--text);
+        color: var(--bg);
         border: none;
-        border-radius: 6px;
-        font-family: inherit;
+        border-radius: 2px;
+        font-family: var(--sans);
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
@@ -77,14 +92,15 @@
       .btn:hover { background: #fff; }
       .btn-ghost {
         background: transparent;
-        color: #666;
-        border: 1px solid #333;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-hover);
+        border-radius: 0;
         padding: 6px 12px;
         font-size: 13px;
       }
-      .btn-ghost:hover { color: #ededed; border-color: #555; background: transparent; }
+      .btn-ghost:hover { color: var(--text); border-color: var(--text-dim); background: transparent; }
 
-      #login-error { color: #e5484d; font-size: 13px; min-height: 18px; }
+      #login-error { color: var(--danger); font-size: 13px; min-height: 18px; }
 
       /* --- Shell --- */
       #dashboard {
@@ -103,7 +119,7 @@
         align-items: center;
         justify-content: space-between;
         padding-bottom: 24px;
-        border-bottom: 1px solid #1a1a1a;
+        border-bottom: 1px solid var(--border);
         margin-bottom: 32px;
       }
       .header-left {
@@ -112,13 +128,13 @@
         gap: 12px;
       }
       .header-left h1 { font-size: 14px; font-weight: 600; }
-      .header-left .sep { color: #333; }
+      .header-left .sep { color: var(--border-hover); }
       .header-left .env {
         font-size: 12px;
-        color: #666;
+        color: var(--text-secondary);
         padding: 2px 8px;
-        border: 1px solid #222;
-        border-radius: 4px;
+        border: 1px solid var(--border);
+        border-radius: 0;
       }
       .header-right {
         display: flex;
@@ -127,7 +143,7 @@
       }
       .header-right .meta {
         font-size: 12px;
-        color: #555;
+        color: var(--text-dim);
       }
 
       /* Toggle */
@@ -137,14 +153,14 @@
         gap: 6px;
         cursor: pointer;
         font-size: 12px;
-        color: #666;
+        color: var(--text-secondary);
         user-select: none;
       }
       .toggle input { display: none; }
       .toggle-track {
         width: 28px;
         height: 16px;
-        background: #333;
+        background: var(--border-hover);
         border-radius: 8px;
         position: relative;
         transition: background 0.15s;
@@ -152,17 +168,17 @@
       .toggle-knob {
         width: 12px;
         height: 12px;
-        background: #666;
+        background: var(--text-secondary);
         border-radius: 50%;
         position: absolute;
         top: 2px;
         left: 2px;
         transition: transform 0.15s, background 0.15s;
       }
-      .toggle input:checked + .toggle-track { background: #333; }
+      .toggle input:checked + .toggle-track { background: var(--border-hover); }
       .toggle input:checked + .toggle-track .toggle-knob {
         transform: translateX(12px);
-        background: #ededed;
+        background: var(--text);
       }
 
       /* --- Cards --- */
@@ -170,19 +186,19 @@
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 1px;
-        background: #1a1a1a;
-        border: 1px solid #1a1a1a;
-        border-radius: 8px;
+        background: var(--border);
+        border: 1px solid var(--border);
+        border-radius: 0;
         overflow: hidden;
         margin-bottom: 32px;
       }
       .card {
-        background: #0a0a0a;
+        background: var(--bg);
         padding: 20px;
       }
       .card-label {
         font-size: 12px;
-        color: #666;
+        color: var(--text-secondary);
         margin-bottom: 8px;
       }
       .card-row {
@@ -195,8 +211,9 @@
         font-size: 24px;
         font-weight: 600;
         letter-spacing: -0.5px;
-        color: #ededed;
+        color: var(--text);
         white-space: nowrap;
+        font-family: var(--mono);
       }
       .card-spark {
         width: 80px;
@@ -218,38 +235,38 @@
       .chart-section-title {
         font-size: 13px;
         font-weight: 500;
-        color: #ededed;
+        color: var(--text);
       }
       .chart-section-sub {
         font-size: 12px;
-        color: #555;
+        color: var(--text-dim);
       }
       .chart-range-pills {
         display: flex;
         gap: 2px;
-        background: #111;
-        border-radius: 6px;
+        background: var(--surface);
+        border-radius: 0;
         padding: 2px;
       }
       .chart-range-pill {
         padding: 4px 12px;
         font-size: 12px;
         font-weight: 500;
-        color: #555;
+        color: var(--text-dim);
         background: transparent;
         border: none;
-        border-radius: 4px;
+        border-radius: 0;
         cursor: pointer;
-        font-family: inherit;
+        font-family: var(--sans);
         transition: color 0.15s, background 0.15s;
       }
       .chart-range-pill:hover { color: #999; }
-      .chart-range-pill.active { color: #ededed; background: #222; }
+      .chart-range-pill.active { color: var(--text); background: #222; }
       .chart-container {
-        border: 1px solid #1a1a1a;
-        border-radius: 8px;
+        border: 1px solid var(--border);
+        border-radius: 0;
         padding: 20px 20px 12px;
-        background: #0a0a0a;
+        background: var(--bg);
         position: relative;
       }
       .chart-area {
@@ -259,12 +276,12 @@
       .chart-area svg { display: block; width: 100%; height: auto; }
       .chart-tooltip {
         position: absolute;
-        background: #1a1a1a;
-        border: 1px solid #333;
-        border-radius: 6px;
+        background: var(--border);
+        border: 1px solid var(--border-hover);
+        border-radius: 0;
         padding: 8px 12px;
         font-size: 12px;
-        color: #ededed;
+        color: var(--text);
         pointer-events: none;
         opacity: 0;
         transition: opacity 0.15s;
@@ -272,8 +289,8 @@
         white-space: nowrap;
       }
       .chart-tooltip.visible { opacity: 1; }
-      .chart-tooltip-label { color: #666; margin-bottom: 2px; }
-      .chart-tooltip-value { font-weight: 600; font-family: "SF Mono", "Fira Code", monospace; }
+      .chart-tooltip-label { color: var(--text-secondary); margin-bottom: 2px; }
+      .chart-tooltip-value { font-weight: 600; font-family: var(--mono); }
       .chart-dot { transition: r 0.1s; }
       .chart-hit:hover + .chart-dot { r: 5; }
       .chart-section-header > div:first-child {
@@ -292,16 +309,16 @@
 
       /* --- Tables --- */
       .panel {
-        border: 1px solid #1a1a1a;
-        border-radius: 8px;
+        border: 1px solid var(--border);
+        border-radius: 0;
         overflow: hidden;
       }
       .panel-header {
         padding: 14px 16px;
-        border-bottom: 1px solid #1a1a1a;
+        border-bottom: 1px solid var(--border);
         font-size: 13px;
         font-weight: 500;
-        color: #ededed;
+        color: var(--text);
       }
 
       table { width: 100%; border-collapse: collapse; }
@@ -310,34 +327,34 @@
         padding: 10px 16px;
         font-size: 12px;
         font-weight: 500;
-        color: #555;
-        border-bottom: 1px solid #1a1a1a;
+        color: var(--text-dim);
+        border-bottom: 1px solid var(--border);
       }
       td {
         padding: 10px 16px;
         font-size: 13px;
         color: #999;
-        border-bottom: 1px solid #111;
+        border-bottom: 1px solid var(--surface);
       }
       tr:last-child td { border-bottom: none; }
-      tr:hover td { background: #111; }
+      tr:hover td { background: var(--surface); }
 
-      td.primary { color: #ededed; font-weight: 500; }
-      td.mono { font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; }
-      td.green { color: #3ddc84; }
-      td.dim { color: #555; }
-      td.red { color: #e5484d; }
+      td.primary { color: var(--text); font-weight: 500; }
+      td.mono { font-family: var(--mono); font-size: 12px; }
+      td.green { color: var(--accent); }
+      td.dim { color: var(--text-dim); }
+      td.red { color: var(--danger); }
 
       .badge {
         display: inline-block;
         padding: 2px 6px;
-        border-radius: 4px;
+        border-radius: 0;
         font-size: 11px;
         font-weight: 500;
       }
-      .badge-ok { background: #062312; color: #3ddc84; }
+      .badge-ok { background: #062312; color: var(--accent); }
       .badge-paid { background: #0d1b2a; color: #52a8ff; }
-      .badge-free { color: #555; }
+      .badge-free { color: var(--text-dim); }
 
       /* --- Breakdown --- */
       .breakdown { padding: 4px 0; }
@@ -347,7 +364,7 @@
         gap: 10px;
         padding: 10px 16px;
       }
-      .breakdown-item + .breakdown-item { border-top: 1px solid #111; }
+      .breakdown-item + .breakdown-item { border-top: 1px solid var(--surface); }
       .breakdown-dot {
         width: 6px;
         height: 6px;
@@ -364,9 +381,9 @@
       }
       .breakdown-val {
         font-size: 13px;
-        color: #ededed;
+        color: var(--text);
         font-weight: 500;
-        font-family: "SF Mono", "Fira Code", monospace;
+        font-family: var(--mono);
         white-space: nowrap;
       }
 
@@ -378,7 +395,7 @@
       }
 
       .loading-row td {
-        color: #333;
+        color: var(--border-hover);
         text-align: center;
         padding: 32px;
       }
@@ -387,21 +404,22 @@
       .tabs {
         display: flex;
         gap: 0;
-        border-bottom: 1px solid #1a1a1a;
+        border-bottom: 1px solid var(--border);
         margin-bottom: 32px;
       }
       .tab {
         padding: 10px 20px;
         font-size: 13px;
         font-weight: 500;
-        color: #555;
+        color: var(--text-dim);
         cursor: pointer;
         border-bottom: 2px solid transparent;
         transition: color 0.15s, border-color 0.15s;
         user-select: none;
+        font-family: var(--sans);
       }
       .tab:hover { color: #999; }
-      .tab.active { color: #ededed; border-bottom-color: #ededed; }
+      .tab.active { color: var(--text); border-bottom-color: var(--text); }
       .tab-content { display: none; }
       .tab-content.active { display: block; }
 
@@ -415,39 +433,39 @@
       }
       .filter-input, .filter-select {
         padding: 8px 12px;
-        background: #0a0a0a;
-        border: 1px solid #333;
-        border-radius: 6px;
-        color: #ededed;
-        font-family: inherit;
+        background: var(--bg);
+        border: 1px solid var(--border-hover);
+        border-radius: 0;
+        color: var(--text);
+        font-family: var(--sans);
         font-size: 13px;
         outline: none;
       }
-      .filter-input:focus, .filter-select:focus { border-color: #ededed; }
-      .filter-input::placeholder { color: #555; }
+      .filter-input:focus, .filter-select:focus { border-color: var(--text); }
+      .filter-input::placeholder { color: var(--text-dim); }
       .filter-select { cursor: pointer; }
-      .filter-select option { background: #0a0a0a; }
+      .filter-select option { background: var(--bg); }
 
       .pagination {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 12px 16px;
-        border-top: 1px solid #1a1a1a;
+        border-top: 1px solid var(--border);
         font-size: 12px;
-        color: #555;
+        color: var(--text-dim);
       }
       .pagination button {
         padding: 6px 12px;
         background: transparent;
-        border: 1px solid #333;
-        border-radius: 4px;
+        border: 1px solid var(--border-hover);
+        border-radius: 0;
         color: #999;
-        font-family: inherit;
+        font-family: var(--sans);
         font-size: 12px;
         cursor: pointer;
       }
-      .pagination button:hover { color: #ededed; border-color: #555; }
+      .pagination button:hover { color: var(--text); border-color: var(--text-dim); }
       .pagination button:disabled { opacity: 0.3; cursor: default; }
 
       /* --- Spend Cap Form --- */
@@ -460,30 +478,30 @@
       }
       .cap-form label {
         font-size: 12px;
-        color: #666;
+        color: var(--text-secondary);
         display: flex;
         flex-direction: column;
         gap: 6px;
       }
       .cap-form input {
         padding: 8px 12px;
-        background: #0a0a0a;
-        border: 1px solid #333;
-        border-radius: 6px;
-        color: #ededed;
-        font-family: inherit;
+        background: var(--bg);
+        border: 1px solid var(--border-hover);
+        border-radius: 0;
+        color: var(--text);
+        font-family: var(--sans);
         font-size: 13px;
         outline: none;
       }
-      .cap-form input:focus { border-color: #ededed; }
-      .cap-form input::placeholder { color: #555; }
+      .cap-form input:focus { border-color: var(--text); }
+      .cap-form input::placeholder { color: var(--text-dim); }
       .btn-sm {
         padding: 8px 16px;
-        background: #ededed;
-        color: #0a0a0a;
+        background: var(--text);
+        color: var(--bg);
         border: none;
-        border-radius: 6px;
-        font-family: inherit;
+        border-radius: 2px;
+        font-family: var(--sans);
         font-size: 13px;
         font-weight: 500;
         cursor: pointer;
@@ -491,21 +509,20 @@
       .btn-sm:hover { background: #fff; }
       .btn-danger {
         background: transparent;
-        color: #e5484d;
-        border: 1px solid #333;
-        padding: 4px 10px;
-        border-radius: 4px;
+        color: var(--danger);
+        border: 1px solid var(--border-hover);
+        border-radius: 0;
         font-size: 12px;
         cursor: pointer;
       }
-      .btn-danger:hover { border-color: #e5484d; }
+      .btn-danger:hover { border-color: var(--danger); }
       .cap-msg {
         font-size: 12px;
         min-height: 18px;
         margin-bottom: 8px;
       }
-      .cap-msg.ok { color: #3ddc84; }
-      .cap-msg.err { color: #e5484d; }
+      .cap-msg.ok { color: var(--accent); }
+      .cap-msg.err { color: var(--danger); }
 
       @media (max-width: 900px) {
         .cap-form { grid-template-columns: 1fr 1fr; }
@@ -526,7 +543,7 @@
   <body>
     <div id="login">
       <div class="login-box">
-        <h1><img src="/logo-nav.svg" alt="" width="28" height="28" style="border-radius:6px;vertical-align:middle;margin-right:8px" />APIMesh</h1>
+        <h1><img src="/logo-nav.svg" alt="APIMesh" width="28" height="28" style="border-radius:6px;vertical-align:middle;margin-right:8px" />APIMesh</h1>
         <input type="password" id="token-input" placeholder="Token" autocomplete="off" />
         <button class="btn" id="login-btn">Log in</button>
         <div id="login-error"></div>
@@ -536,7 +553,7 @@
     <div id="dashboard">
       <div class="header">
         <div class="header-left">
-          <h1><img src="/logo-nav.svg" alt="" width="24" height="24" style="border-radius:5px;vertical-align:middle;margin-right:6px" />APIMesh</h1>
+          <h1><img src="/logo-nav.svg" alt="APIMesh" width="28" height="28" style="border-radius:6px;vertical-align:middle;margin-right:8px" />APIMesh</h1>
           <span class="sep">/</span>
           <span class="env">production</span>
         </div>

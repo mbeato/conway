@@ -1,4 +1,5 @@
 import { monitor } from "./monitor";
+import { scanner } from "./scanner";
 import { scout } from "./scout";
 import { build } from "./build";
 import { list } from "./list";
@@ -20,6 +21,10 @@ async function main() {
   // Step 1: Monitor — always runs
   console.log("[brain] Step 1: Monitor");
   const health = await monitor();
+
+  // Step 1.5: Scanner — scan MPP ecosystem for new projects
+  console.log("\n[brain] Step 1.5: Scanner");
+  await scanner();
 
   // Step 2: Scout — needs LLM key
   if (hasLlmKey) {

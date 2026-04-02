@@ -141,7 +141,7 @@ async function updateAwesomeMpp(newApis: { name: string }[]): Promise<string[]> 
     await Bun.spawn(["rm", "-rf", tmpDir]).exited;
 
     const clone = Bun.spawn(
-      ["git", "clone", "--depth", "1", "https://github.com/mbeato/awesome-mpp.git", tmpDir],
+      ["git", "clone", "--depth", "1", process.env.GITHUB_TOKEN ? `https://${process.env.GITHUB_TOKEN}@github.com/mbeato/awesome-mpp.git` : "https://github.com/mbeato/awesome-mpp.git", tmpDir],
       { stdout: "pipe", stderr: "pipe", timeout: 30_000 }
     );
     const cloneExit = await clone.exited;

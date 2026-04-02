@@ -4,44 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Credits &amp; Billing - APIMesh</title>
+    <link rel="icon" type="image/svg+xml" href="/logo-nav.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
       :root {
-        --bg: #090909;
-        --surface: #0f0f0f;
-        --border: #1a1a1a;
+        --bg: #0a0a0a;
+        --surface: #111111;
+        --border: #1c1c1c;
         --border-hover: #2a2a2a;
-        --text: #e8e8e8;
-        --text-secondary: #888;
+        --text: #e0e0e0;
+        --text-secondary: #777;
         --text-dim: #555;
         --accent: #3ddc84;
         --accent-dim: rgba(61, 220, 132, 0.08);
         --danger: #ef4444;
-        --font: "Space Grotesk", -apple-system, sans-serif;
+        --danger-dim: rgba(239, 68, 68, 0.08);
+        --sans: "DM Sans", -apple-system, sans-serif;
         --mono: "JetBrains Mono", "SF Mono", monospace;
       }
 
       body {
-        font-family: var(--font);
+        font-family: var(--sans);
         background: var(--bg);
         color: var(--text);
         min-height: 100vh;
         -webkit-font-smoothing: antialiased;
         overflow-y: auto;
-      }
-
-      #mesh {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: 0;
       }
 
       .billing-wrapper {
@@ -93,7 +85,6 @@
 
       /* Feedback messages */
       .error-message, .success-message {
-        border-radius: 8px;
         padding: 10px 14px;
         font-size: 13px;
         margin-bottom: 16px;
@@ -125,7 +116,6 @@
       .balance-section {
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 12px;
         padding: 28px 32px;
         margin-bottom: 28px;
         text-align: center;
@@ -138,6 +128,7 @@
         text-transform: uppercase;
         letter-spacing: 1px;
         margin-bottom: 8px;
+        font-family: var(--mono);
       }
 
       .balance-amount {
@@ -166,7 +157,6 @@
       .tier-card {
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 12px;
         padding: 24px;
         transition: border-color 0.2s;
         display: flex;
@@ -218,7 +208,6 @@
         color: var(--accent);
         background: var(--accent-dim);
         padding: 3px 8px;
-        border-radius: 4px;
       }
 
       .btn-buy {
@@ -226,8 +215,8 @@
         width: 100%;
         padding: 10px 20px;
         border: none;
-        border-radius: 8px;
-        font-family: var(--font);
+        border-radius: 2px;
+        font-family: var(--sans);
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
@@ -240,20 +229,10 @@
       .btn-buy:active { transform: translateY(0); }
       .btn-buy:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-      @keyframes fadeUp {
-        from { opacity: 0; transform: translateY(16px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      .billing-wrapper {
-        animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-      }
-
       /* Alert threshold section */
       .alert-section {
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 12px;
         padding: 20px 24px;
         margin-bottom: 28px;
       }
@@ -277,7 +256,6 @@
         padding: 8px 12px;
         background: var(--bg);
         border: 1px solid var(--border);
-        border-radius: 6px;
         color: var(--text);
         font-family: var(--mono);
         font-size: 14px;
@@ -291,8 +269,8 @@
       .btn-alert {
         padding: 8px 16px;
         border: none;
-        border-radius: 6px;
-        font-family: var(--font);
+        border-radius: 2px;
+        font-family: var(--sans);
         font-size: 13px;
         font-weight: 600;
         cursor: pointer;
@@ -307,8 +285,7 @@
       .btn-alert-clear {
         padding: 8px 16px;
         border: 1px solid var(--border);
-        border-radius: 6px;
-        font-family: var(--font);
+        font-family: var(--sans);
         font-size: 13px;
         font-weight: 500;
         cursor: pointer;
@@ -330,7 +307,6 @@
       .txn-section {
         background: var(--surface);
         border: 1px solid var(--border);
-        border-radius: 12px;
         padding: 24px;
         margin-bottom: 28px;
       }
@@ -356,6 +332,7 @@
         letter-spacing: 0.5px;
         padding: 0 8px 10px;
         border-bottom: 1px solid var(--border);
+        font-family: var(--mono);
       }
 
       .txn-table td {
@@ -421,9 +398,8 @@
         margin-top: 12px;
         background: transparent;
         border: 1px solid var(--border);
-        border-radius: 6px;
         color: var(--text-secondary);
-        font-family: var(--font);
+        font-family: var(--sans);
         font-size: 13px;
         cursor: pointer;
         transition: border-color 0.2s, color 0.2s;
@@ -444,7 +420,6 @@
     </style>
   </head>
   <body>
-    <canvas id="mesh"></canvas>
     <div id="billing-page" class="billing-wrapper">
 
       <div class="billing-header">

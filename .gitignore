@@ -22,6 +22,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .env.production.local
 .env.local
 .env.staging
+.env.production
 
 # caches
 .eslintcache
@@ -81,3 +82,5 @@ scripts/fix-staging-restart.sh
 
 # External repos
 awesome-x402-1/
+scripts/install-services.sh
+scripts/install-staging-services.sh
