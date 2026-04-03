@@ -43,6 +43,9 @@ if (DASHBOARD_TOKEN.length < 32) {
 // Pre-compute dummy hash at startup for constant-time login (no first-request penalty)
 const DUMMY_HASH_PROMISE = hashPassword("dummy-password-for-constant-time-login");
 
+// Registration gate — set REGISTRATION_ENABLED=false on staging to block new signups
+const REGISTRATION_ENABLED = process.env.REGISTRATION_ENABLED !== "false";
+
 // Rate limit for public routes (higher limit, still bounded)
 const publicLimit = rateLimit("dashboard-public", 120, 60_000);
 const webhookLimit = rateLimit("billing-webhook", 30, 60_000);
@@ -230,8 +233,9 @@ app.get("/tools/:name", publicLimit, async (c) => {
   return c.text("Tool not found", 404);
 });
 
-// Signup page — public, no auth
+// Signup page — public, no auth (blocked when registration disabled)
 app.get("/signup", publicLimit, async (c) => {
+  if (!REGISTRATION_ENABLED) return c.redirect("/login");
   const file = Bun.file(join(import.meta.dir, "../landing/signup.html"));
   if (await file.exists()) {
     return new Response(await file.text(), {
@@ -264,8 +268,9 @@ app.get("/login", publicLimit, async (c) => {
   return c.text("Page not found", 404);
 });
 
-// Verify page — public, no auth
+// Verify page — public, no auth (blocked when registration disabled)
 app.get("/verify", publicLimit, async (c) => {
+  if (!REGISTRATION_ENABLED) return c.redirect("/login");
   const file = Bun.file(join(import.meta.dir, "../landing/verify.html"));
   if (await file.exists()) {
     return new Response(await file.text(), {
@@ -517,6 +522,7 @@ function csrfCheck(c: any): boolean {
 const authLimit = rateLimit("dashboard-auth", 60, 60_000);
 
 app.post("/auth/signup", authLimit, async (c) => {
+  if (!REGISTRATION_ENABLED) return c.json({ error: "Registration is disabled on this environment" }, 403);
   if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   const ip = getIp(c);
   const userAgent = getUserAgent(c);
@@ -610,6 +616,7 @@ app.post("/auth/signup", authLimit, async (c) => {
 });
 
 app.post("/auth/verify", authLimit, async (c) => {
+  if (!REGISTRATION_ENABLED) return c.json({ error: "Registration is disabled on this environment" }, 403);
   if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   let body: any;
   try {
@@ -690,6 +697,7 @@ app.post("/auth/verify", authLimit, async (c) => {
 });
 
 app.post("/auth/resend-code", authLimit, async (c) => {
+  if (!REGISTRATION_ENABLED) return c.json({ error: "Registration is disabled on this environment" }, 403);
   if (!csrfCheck(c)) return c.json({ error: "Forbidden" }, 403);
   let body: any;
   try {
