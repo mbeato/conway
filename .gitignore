@@ -51,6 +51,15 @@ wallet.json
 # Brain test builds
 .test-builds
 
+# Brain runtime state files
+scripts/brain/scanner-state.json
+scripts/brain/mcp-monitor-state.json
+scripts/brain/github-engage-state.json
+scripts/brain/directory-state.json
+
+# Brain digests (generated daily)
+data/digests/
+
 # Brain-generated marketing content
 data/drafts/
 apis/landing/tools/

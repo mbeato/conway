@@ -414,6 +414,52 @@ async function generateToolPages(): Promise<number> {
 }
 
 // ---------------------------------------------------------------------------
+// Generate sitemap.xml for SEO
+// ---------------------------------------------------------------------------
+
+async function generateSitemap(): Promise<void> {
+  const active = getActiveApis();
+  const SKIP = new Set(["dashboard", "landing"]);
+  const apiNames = new Set(active.map(a => a.name));
+
+  // Also include filesystem APIs not in DB
+  try {
+    const entries = require("fs").readdirSync(APIS_DIR, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory() && !SKIP.has(entry.name)) apiNames.add(entry.name);
+    }
+  } catch {}
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const urls = [
+    { loc: "https://apimesh.xyz/", priority: "1.0", changefreq: "weekly" },
+    { loc: "https://apimesh.xyz/tools", priority: "0.9", changefreq: "weekly" },
+    { loc: "https://apimesh.xyz/changelog", priority: "0.7", changefreq: "weekly" },
+    { loc: "https://apimesh.xyz/signup", priority: "0.6", changefreq: "monthly" },
+    { loc: "https://apimesh.xyz/dashboard", priority: "0.5", changefreq: "monthly" },
+  ];
+
+  for (const name of apiNames) {
+    urls.push({ loc: `https://apimesh.xyz/tools/${name}`, priority: "0.8", changefreq: "monthly" });
+  }
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.map(u => `  <url>
+    <loc>${u.loc}</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>${u.changefreq}</changefreq>
+    <priority>${u.priority}</priority>
+  </url>`).join("\n")}
+</urlset>`;
+
+  const sitemapPath = join(APIS_DIR, "landing", "sitemap.xml");
+  await Bun.write(sitemapPath, xml);
+  console.log(`[market] Generated sitemap.xml with ${urls.length} URLs`);
+}
+
+// ---------------------------------------------------------------------------
 // Update README tool table
 // ---------------------------------------------------------------------------
 
@@ -469,6 +515,9 @@ export async function market(): Promise<void> {
 
   // 3. Generate/update all tool pages (always runs — picks up new APIs)
   await generateToolPages();
+
+  // 3.5. Generate sitemap.xml
+  await generateSitemap();
 
   // 4. Update README counts
   const allApis: ApiInfo[] = [];

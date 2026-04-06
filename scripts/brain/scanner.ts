@@ -2,11 +2,43 @@
  * MPP Ecosystem Scanner — keeps awesome-mpp directory current.
  *
  * 1. Scrapes mpppay.fun for live providers
- * 2. Diffs against awesome-mpp README.md
- * 3. Adds new providers to the correct section
- * 4. Opens notification issues on new projects' repos
- * 5. Reviews and auto-merges valid PRs on awesome-mpp
+ * 2. Searches GitHub + npm for MPP repos/packages
+ * 3. Diffs against awesome-mpp README.md
+ * 4. Adds new providers to the correct section
+ * 5. Opens notification issues on new projects' repos
+ * 6. Reviews and auto-merges valid PRs on awesome-mpp
+ *
+ * State persisted in scanner-state.json to avoid re-processing
+ * known projects and retrying failed issue repos every run.
  */
+
+import { join } from "path";
+
+const STATE_FILE = join(import.meta.dir, "scanner-state.json");
+
+interface ScannerState {
+  /** Project IDs we've already processed (found + diffed) */
+  knownProjectIds: string[];
+  /** Repos where issue creation failed permanently (disabled, no permission) */
+  failedIssueRepos: string[];
+  /** Repos where we successfully opened an issue */
+  notifiedRepos: string[];
+  /** Last run ISO timestamp */
+  lastRun: string;
+}
+
+async function loadState(): Promise<ScannerState> {
+  try {
+    const f = Bun.file(STATE_FILE);
+    if (await f.exists()) return await f.json();
+  } catch {}
+  return { knownProjectIds: [], failedIssueRepos: [], notifiedRepos: [], lastRun: "" };
+}
+
+async function saveState(state: ScannerState): Promise<void> {
+  state.lastRun = new Date().toISOString();
+  await Bun.write(STATE_FILE, JSON.stringify(state, null, 2));
+}
 
 interface MppProvider {
   id: string;
@@ -185,42 +217,7 @@ async function searchNpm(): Promise<MppProvider[]> {
   return providers;
 }
 
-/** Search Smithery for MPP-related MCP servers. */
-async function searchSmithery(): Promise<MppProvider[]> {
-  const providers: MppProvider[] = [];
-  try {
-    const res = await fetch("https://smithery.ai/api/discover", {
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) {
-      console.log("[scanner] Smithery: API returned " + res.status + " — skipping");
-      return providers;
-    }
-    const text = await res.text();
-    if (!text || text.length < 10) {
-      console.log("[scanner] Smithery: empty response — skipping");
-      return providers;
-    }
-    const data = JSON.parse(text);
-    const items = Array.isArray(data) ? data : data.servers || data.items || [];
-    for (const item of items) {
-      const name = item.name || item.title || "";
-      const desc = (item.description || "").toLowerCase();
-      if (!desc.includes("mpp") && !desc.includes("x402") && !desc.includes("tempo") && !desc.includes("machine payment")) continue;
-      providers.push({
-        id: `smithery-${name}`,
-        name,
-        category: "Smithery",
-        description: (item.description || "").slice(0, 200),
-        websiteUrl: item.url || item.homepage || "https://smithery.ai",
-      });
-    }
-  } catch {
-    console.warn("[scanner] Smithery search failed — skipping");
-  }
-  console.log(`[scanner] Smithery: found ${providers.length} MPP-related servers`);
-  return providers;
-}
+// Smithery removed — API endpoint has been returning 404 since at least April 2026
 
 /** Parse existing project names AND URLs from awesome-mpp README. */
 function parseExisting(readme: string): { names: Set<string>; urls: Set<string> } {
@@ -440,8 +437,11 @@ thanks for building in the MPP ecosystem
 max`;
 }
 
-async function openIssuesOnNewRepos(newProviders: MppProvider[]): Promise<void> {
+async function openIssuesOnNewRepos(newProviders: MppProvider[], state: ScannerState): Promise<void> {
+  const failedSet = new Set(state.failedIssueRepos.map(r => r.toLowerCase()));
+  const notifiedSet = new Set(state.notifiedRepos.map(r => r.toLowerCase()));
   let opened = 0;
+
   for (const p of newProviders) {
     const repo = await findGitHubRepo(p);
     if (!repo) {
@@ -449,13 +449,18 @@ async function openIssuesOnNewRepos(newProviders: MppProvider[]): Promise<void> 
       continue;
     }
 
-    // Skip our own repos
-    if (repo.toLowerCase().startsWith("mbeato/")) continue;
+    const repoLower = repo.toLowerCase();
 
-    // Check if we already opened an issue on this repo
-    const existing = await run(["gh", "issue", "list", "-R", repo, "--search", ISSUE_TITLE, "--json", "title", "--jq", "length"]);
-    if (existing !== null && parseInt(existing.trim(), 10) > 0) {
-      console.log(`[scanner] issue already exists on ${repo} — skipping`);
+    // Skip our own repos
+    if (repoLower.startsWith("mbeato/")) continue;
+
+    // Skip repos we already notified or that permanently failed
+    if (notifiedSet.has(repoLower)) {
+      console.log(`[scanner] already notified ${repo} — skipping`);
+      continue;
+    }
+    if (failedSet.has(repoLower)) {
+      console.log(`[scanner] ${repo} previously failed — skipping`);
       continue;
     }
 
@@ -463,10 +468,16 @@ async function openIssuesOnNewRepos(newProviders: MppProvider[]): Promise<void> 
     const result = await run(["gh", "issue", "create", "-R", repo, "--title", ISSUE_TITLE, "--body", issueBody(p.name)]);
     if (result !== null) {
       console.log(`[scanner] opened issue on ${repo}`);
+      state.notifiedRepos.push(repoLower);
+      notifiedSet.add(repoLower);
       opened++;
+    } else {
+      // Permanent failure — don't retry (issues disabled, no permission, etc.)
+      state.failedIssueRepos.push(repoLower);
+      failedSet.add(repoLower);
     }
 
-    // Rate limit: don't spam GitHub
+    // Rate limit
     await Bun.sleep(2_000);
   }
   if (opened > 0) console.log(`[scanner] opened ${opened} notification issue(s)`);
@@ -573,6 +584,9 @@ async function handlePullRequests(): Promise<void> {
 export async function scanner(): Promise<void> {
   console.log("[scanner] Scanning MPP ecosystem across multiple sources...");
 
+  const state = await loadState();
+  const knownIds = new Set(state.knownProjectIds);
+
   // Step 1: Gather from all sources
   const allProviders: MppProvider[] = [];
   const dedup = new Set<string>();
@@ -611,25 +625,25 @@ export async function scanner(): Promise<void> {
     console.warn(`[scanner] npm search failed — ${err}`);
   }
 
-  // 1d. Smithery
-  try {
-    const sm = await searchSmithery();
-    for (const p of sm) {
-      const key = p.name.toLowerCase().trim();
-      if (!dedup.has(key)) { dedup.add(key); allProviders.push(p); }
-    }
-  } catch (err) {
-    console.warn(`[scanner] Smithery search failed — ${err}`);
-  }
-
   console.log(`[scanner] Total unique projects across all sources: ${allProviders.length}`);
 
-  if (allProviders.length === 0) {
-    console.log("[scanner] No projects found from any source — skipping");
+  // Filter out projects we already know about from previous runs
+  const unseenProviders = allProviders.filter(p => !knownIds.has(p.id));
+  console.log(`[scanner] ${unseenProviders.length} unseen (${allProviders.length - unseenProviders.length} already known from previous runs)`);
+
+  // Mark all current projects as known for next run
+  for (const p of allProviders) knownIds.add(p.id);
+  state.knownProjectIds = [...knownIds];
+
+  if (unseenProviders.length === 0) {
+    console.log("[scanner] No new projects since last run — skipping README diff");
+    // Still check PRs
+    if (await hasGhCli()) await handlePullRequests();
+    await saveState(state);
     return;
   }
 
-  // Step 2: Fetch awesome-mpp README via GitHub API (avoids clone hanging issues)
+  // Step 2: Fetch awesome-mpp README via GitHub API
   console.log("[scanner] Fetching awesome-mpp README...");
   let readme: string;
   try {
@@ -640,14 +654,14 @@ export async function scanner(): Promise<void> {
     readme = await res.text();
   } catch (err) {
     console.warn(`[scanner] failed to fetch README — ${err}`);
+    await saveState(state);
     return;
   }
-  console.log("[scanner] README fetched, parsing...");
 
   const existing = parseExisting(readme);
 
-  // Step 3: Diff — filter by name (URL dedup happens in updateAwesomeMpp)
-  const newProviders = allProviders.filter(
+  // Step 3: Diff unseen projects against README
+  const newProviders = unseenProviders.filter(
     (p) => !existing.names.has(p.name.toLowerCase().trim())
   );
 
@@ -657,7 +671,7 @@ export async function scanner(): Promise<void> {
 
     // Step 4: Open notification issues (requires gh CLI)
     if (await hasGhCli()) {
-      await openIssuesOnNewRepos(newProviders);
+      await openIssuesOnNewRepos(newProviders, state);
     } else {
       console.log("[scanner] gh CLI not available — skipping issue notifications");
     }
@@ -671,6 +685,8 @@ export async function scanner(): Promise<void> {
   } else {
     console.log("[scanner] gh CLI not available — skipping PR handling");
   }
+
+  await saveState(state);
 }
 
 // Allow standalone execution: bun run scripts/brain/scanner.ts
