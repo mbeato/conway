@@ -26,7 +26,7 @@
 </details>
 
 - [x] **Phase 13: Legal Compliance** - Ship compliance pages, signup consent, and abuse process so APIMesh operates with full legal cover (completed 2026-04-07)
-- [ ] **Phase 14: Demand-Driven Scout** - Upgrade scout to select API targets based on real search volume and market signals instead of LLM guessing
+- [x] **Phase 14: Demand-Driven Scout** - Upgrade scout to select API targets based on real search volume and market signals instead of LLM guessing (completed 2026-04-07)
 - [ ] **Phase 15: Higher Quality Builder** - Upgrade brain-built APIs to produce rich, well-documented output that justifies paid usage over DIY
 
 ## Phase Details
@@ -100,5 +100,5 @@ Phases execute in numeric order: 13 -> 14 -> 15
 | 11. Platform Analytics & Security | v1.0 | 3/3 | Complete | 2026-03-26 |
 | 12. Documentation Backfill | v1.0 | 1/1 | Complete | 2026-03-26 |
 | 13. Legal Compliance | v1.1 | 1/2 | Complete    | 2026-04-07 |
-| 14. Demand-Driven Scout | v1.1 | 1/2 | In progress | - |
+| 14. Demand-Driven Scout | v1.1 | 1/2 | Complete    | 2026-04-07 |
 | 15. Higher Quality Builder | v1.1 | 0/? | Not started | - |
