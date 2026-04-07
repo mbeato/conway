@@ -1,0 +1,15 @@
+{
+  "theme_week": {
+    "enabled": false,
+    "category": "security",
+    "description": "SSL/TLS and certificate monitoring APIs",
+    "start_date": "2026-04-07",
+    "end_date": "2026-04-13"
+  },
+  "demand_sources": {
+    "dataforseo_enabled": true,
+    "autocomplete_fallback": true,
+    "rapidapi_enabled": true,
+    "devto_feedback_enabled": true
+  }
+}
