@@ -25,7 +25,7 @@
 
 </details>
 
-- [ ] **Phase 13: Legal Compliance** - Ship compliance pages, signup consent, and abuse process so APIMesh operates with full legal cover
+- [x] **Phase 13: Legal Compliance** - Ship compliance pages, signup consent, and abuse process so APIMesh operates with full legal cover (completed 2026-04-07)
 - [ ] **Phase 14: Demand-Driven Scout** - Upgrade scout to select API targets based on real search volume and market signals instead of LLM guessing
 - [ ] **Phase 15: Higher Quality Builder** - Upgrade brain-built APIs to produce rich, well-documented output that justifies paid usage over DIY
 
@@ -45,7 +45,7 @@
 **UI hint**: yes
 
 Plans:
-- [ ] 13-01-PLAN.md — Legal pages, routes, and footer (LEGAL-01 through LEGAL-07)
+- [x] 13-01-PLAN.md — Legal pages, routes, and footer (LEGAL-01 through LEGAL-07)
 - [ ] 13-02-PLAN.md — Signup consent, Stripe refund text, and tests (LEGAL-08, LEGAL-09)
 
 ### Phase 14: Demand-Driven Scout
@@ -58,11 +58,11 @@ Plans:
   3. Scoring model demonstrably weights measured demand signals higher than LLM-estimated demand when both are available
   4. Brain supports themed expansion weeks where scout focuses on a configured category instead of scattershot gap-filling
   5. High-scoring backlog items (overall_score > 7.5) trigger gpt-4.1 model escalation for the build step
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 14-01: TBD
-- [ ] 14-02: TBD
+- [ ] 14-01-PLAN.md — Demand data sources, tests, and DB schema extension (DEMAND-01, DEMAND-02, DEMAND-03, DEMAND-06)
+- [ ] 14-02-PLAN.md — Scoring integration, theme weeks, and model escalation (DEMAND-04, DEMAND-05, DEMAND-07)
 
 ### Phase 15: Higher Quality Builder
 **Goal**: Brain-built APIs produce rich, structured, well-documented output with automated quality gates -- every deployed API justifies its price over free alternatives
@@ -99,6 +99,6 @@ Phases execute in numeric order: 13 -> 14 -> 15
 | 10. Verification & Traceability | v1.0 | 3/3 | Complete | 2026-03-24 |
 | 11. Platform Analytics & Security | v1.0 | 3/3 | Complete | 2026-03-26 |
 | 12. Documentation Backfill | v1.0 | 1/1 | Complete | 2026-03-26 |
-| 13. Legal Compliance | v1.1 | 0/2 | In progress | - |
-| 14. Demand-Driven Scout | v1.1 | 0/? | Not started | - |
+| 13. Legal Compliance | v1.1 | 1/2 | Complete    | 2026-04-07 |
+| 14. Demand-Driven Scout | v1.1 | 0/2 | Not started | - |
 | 15. Higher Quality Builder | v1.1 | 0/? | Not started | - |
