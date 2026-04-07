@@ -1,5 +1,12 @@
 import db, { insertBacklogItem, backlogItemExists, getActiveApis } from "../../shared/db";
 import { chatJson } from "../../shared/llm";
+import { getKeywordVolumes } from "./demand/dataforseo";
+import { getAutocompleteSuggestions } from "./demand/autocomplete";
+import { getRapidApiDemand } from "./demand/rapidapi";
+import { analyzeCompetitorGaps } from "./demand/competitors";
+import { getDevtoEngagement, getCategoryInterest } from "./demand/devto-feedback";
+import { computeOverallScore, normalizeDemandSignal } from "./demand/scoring";
+import { loadScoutConfig, isThemeWeekActive } from "./scout-config";
 
 interface ScoredOpportunity {
   name: string;
@@ -298,7 +305,88 @@ async function gatherSignals(): Promise<string[]> {
     signals.push("404 logs: unavailable");
   }
 
+  // 5. RapidAPI marketplace demand
+  const config = await loadScoutConfig();
+  if (config.demand_sources.rapidapi_enabled) {
+    const categories = ["security", "seo", "monitoring", "dns", "email"];
+    for (const cat of categories) {
+      try {
+        const demand = await getRapidApiDemand(cat);
+        if (demand && demand.listing_count > 0) {
+          signals.push(`RapidAPI ${cat}: ${demand.listing_count} listings (${demand.sample_names.slice(0, 3).join(", ")})`);
+        }
+      } catch { /* non-critical */ }
+    }
+  }
+
+  // 6. Dev.to engagement feedback
+  if (config.demand_sources.devto_feedback_enabled) {
+    try {
+      const articles = await getDevtoEngagement();
+      if (articles.length > 0) {
+        const interests = getCategoryInterest(articles);
+        const top5 = [...interests.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([tag, views]) => `${tag}: ${views} views`);
+        if (top5.length > 0) {
+          signals.push(`Dev.to reader interest (by tag views):\n${top5.join("\n")}`);
+        }
+      }
+    } catch { /* non-critical */ }
+  }
+
+  // 7. Competitor gap analysis
+  try {
+    const gaps = analyzeCompetitorGaps();
+    const uncovered = gaps.filter(g => g.our_coverage === "none");
+    if (uncovered.length > 0) {
+      const gapLines = uncovered.map(g => `- ${g.competitor_name} (${g.category}): ${g.gap_description} [${g.their_pricing}]`);
+      signals.push(`Competitor gaps we don't cover:\n${gapLines.join("\n")}`);
+    }
+  } catch { /* non-critical */ }
+
   return signals;
+}
+
+// ---------------------------------------------------------------------------
+// Demand data gathering (DataForSEO + autocomplete fallback)
+// ---------------------------------------------------------------------------
+
+async function gatherDemandData(categories: string[]): Promise<{
+  keywordVolumes: Map<string, number>;
+  demandSource: string;
+}> {
+  const keywordVolumes = new Map<string, number>();
+  let demandSource = "none";
+
+  // Try DataForSEO first
+  const keywords = categories.map(c => `${c} api`);
+  const volumes = await getKeywordVolumes(keywords);
+  if (volumes.length > 0) {
+    demandSource = "dataforseo";
+    for (const v of volumes) {
+      if (v.search_volume !== null) {
+        // Strip " api" suffix to get back to category name
+        const cat = v.keyword.replace(/ api$/i, "");
+        keywordVolumes.set(cat, v.search_volume);
+      }
+    }
+  }
+
+  // Fallback to Google Autocomplete if DataForSEO returned nothing
+  if (keywordVolumes.size === 0) {
+    demandSource = "autocomplete";
+    for (const cat of categories.slice(0, 10)) { // Limit to 10 to avoid rate limiting
+      const suggestions = await getAutocompleteSuggestions(`${cat} api`);
+      // More suggestions = higher interest. Use count as a rough proxy.
+      keywordVolumes.set(cat, suggestions.length * 100); // Scale up for normalization
+      // 500ms delay between requests to avoid Google rate limiting
+      await Bun.sleep(500);
+    }
+  }
+
+  return { keywordVolumes, demandSource };
 }
 
 export async function scout(): Promise<ScoredOpportunity[]> {
@@ -319,8 +407,15 @@ export async function scout(): Promise<ScoredOpportunity[]> {
   const existingApiList = getExistingApiList();
   console.log(`[scout] Live API list loaded for dedup`);
 
-  const prompt = `You are Conway, an autonomous API marketplace builder. Your job is to find UNDERSERVED niches — APIs that developers actually need but can't easily find.
+  // Check for theme week to inject category focus
+  const scoutConfig = await loadScoutConfig();
+  const themeWeekActive = isThemeWeekActive(scoutConfig);
+  const themeWeekInstruction = themeWeekActive
+    ? `\nTHEME WEEK: Focus 3 of your 5 suggestions on the '${scoutConfig.theme_week.category}' category. Description: ${scoutConfig.theme_week.description}\n`
+    : "";
 
+  const prompt = `You are Conway, an autonomous API marketplace builder. Your job is to find UNDERSERVED niches — APIs that developers actually need but can't easily find.
+${themeWeekInstruction}
 Market signals (from the last few days):
 <data>
 ${signalBlock}
@@ -387,6 +482,31 @@ Return a JSON array of exactly 5 objects with: name, description, demand_score, 
     }
     console.log(`[scout] LLM returned ${opportunities.length} opportunities`);
 
+    // Gather demand data and re-score with measured demand signals
+    const categories = opportunities.map(o => {
+      // Extract rough category from name (first segment before dash)
+      const parts = o.name.split("-");
+      return parts[0];
+    });
+    const { keywordVolumes, demandSource } = await gatherDemandData(categories);
+    console.log(`[scout] Demand data gathered from ${demandSource} (${keywordVolumes.size} volumes)`);
+
+    // Re-score each opportunity with measured demand
+    for (const opp of opportunities) {
+      const catKey = opp.name.split("-")[0];
+      const rawVolume = keywordVolumes.get(catKey) ?? null;
+      const measuredDemand = rawVolume !== null ? normalizeDemandSignal(rawVolume) : null;
+
+      // Re-compute overall score using the new weighted formula
+      opp.overall_score = computeOverallScore({
+        demand_score: opp.demand_score,
+        measured_demand: measuredDemand,
+        effort_score: opp.effort_score,
+        competition_score: opp.competition_score,
+        saturation_score: opp.saturation_score,
+      });
+    }
+
     // Filter and insert into backlog
     let inserted = 0;
     for (const opp of opportunities) {
@@ -418,9 +538,20 @@ Return a JSON array of exactly 5 objects with: name, description, demand_score, 
       const saturation = clampScore(opp.saturation_score);
       const overall = clampScore(opp.overall_score);
 
-      insertBacklogItem(opp.name, cleanDescription, demand, effort, competition, overall, saturation);
+      // Extract demand data for this opportunity
+      const catKey = opp.name.split("-")[0];
+      const rawVolume = keywordVolumes.get(catKey) ?? null;
+      const measuredDemand = rawVolume !== null ? normalizeDemandSignal(rawVolume) : null;
+
+      insertBacklogItem(opp.name, cleanDescription, demand, effort, competition, overall, saturation, {
+        search_volume: rawVolume,
+        marketplace_listings: null,
+        measured_demand_score: measuredDemand,
+        demand_source: demandSource,
+        category: catKey,
+      });
       inserted++;
-      console.log(`[scout] Added to backlog: ${opp.name} (score: ${overall})`);
+      console.log(`[scout] Added to backlog: ${opp.name} (score: ${overall}, demand_source: ${demandSource})`);
     }
 
     console.log(`[scout] Inserted ${inserted} new items into backlog`);

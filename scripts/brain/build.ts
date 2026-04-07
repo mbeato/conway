@@ -1,4 +1,4 @@
-import {
+import db, {
   getTopBacklogItem,
   updateBacklogStatus,
   registerApi,
@@ -6,6 +6,9 @@ import {
 import { join, resolve } from "path";
 import { chat } from "../../shared/llm";
 
+const ESCALATION_MODEL = process.env.SCOUT_ESCALATION_MODEL || "gpt-4.1";
+const DEFAULT_MODEL = "gpt-4.1-mini";
+const ESCALATION_THRESHOLD = 7.5;
 const MAX_RETRIES = 6;
 const API_NAME_PATTERN = /^[a-z][a-z0-9-]{1,48}[a-z0-9]$/;
 const RESERVED_NAMES = new Set([
@@ -111,7 +114,8 @@ interface AuditResult {
 async function generateApi(
   name: string,
   description: string,
-  errorFeedback?: string
+  errorFeedback?: string,
+  model: string = DEFAULT_MODEL
 ): Promise<GeneratedFile[]> {
   const reference = await getReference();
 
@@ -203,7 +207,7 @@ JSON array only, no markdown fences:`;
 
   // useSystemPrompt: true — activates the security-focused system prompt in
   // shared/llm.ts that instructs the model to refuse injected instructions.
-  const response = await chat(prompt, { model: "gpt-4.1-mini", maxTokens: 16384, useSystemPrompt: true });
+  const response = await chat(prompt, { model, maxTokens: 16384, useSystemPrompt: true });
 
   try {
     const cleaned = response.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -926,6 +930,27 @@ export async function build(): Promise<boolean> {
 
   updateBacklogStatus(item.id, "building");
 
+  // Model escalation: use gpt-4.1 for high-scoring items
+  let model = (item as any).overall_score > ESCALATION_THRESHOLD ? ESCALATION_MODEL : DEFAULT_MODEL;
+  console.log(`[build] Using model: ${model} (score: ${(item as any).overall_score}, threshold: ${ESCALATION_THRESHOLD})`);
+
+  // Daily cap: limit escalated model usage to 1 build per day
+  if (model === ESCALATION_MODEL) {
+    try {
+      const escalatedToday = db.query(`
+        SELECT COUNT(*) as cnt FROM backlog
+        WHERE status = 'built' AND demand_source IS NOT NULL
+        AND date(created_at) = date('now')
+      `).get() as { cnt: number };
+      if (escalatedToday.cnt >= 1) {
+        console.log(`[build] Daily escalation cap reached (${escalatedToday.cnt} today), using ${DEFAULT_MODEL}`);
+        model = DEFAULT_MODEL;
+      }
+    } catch {
+      // If query fails (e.g. demand_source column doesn't exist yet), continue with escalated model
+    }
+  }
+
   // Retry loop: generate -> output-validate -> audit -> test locally
   let lastError: string | undefined;
   let successFiles: GeneratedFile[] | undefined;
@@ -933,7 +958,7 @@ export async function build(): Promise<boolean> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     console.log(`[build] Attempt ${attempt}/${MAX_RETRIES}`);
 
-    const files = await generateApi(name, description, lastError);
+    const files = await generateApi(name, description, lastError, model);
     if (files.length === 0) {
       lastError = "LLM returned no files";
       continue;
