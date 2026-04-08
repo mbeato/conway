@@ -1,5 +1,6 @@
-import { test, expect } from "bun:test";
+import { test, expect, describe } from "bun:test";
 import { scoreQuality, type QualityScore } from "./quality-scorer";
+import { join } from "path";
 
 interface GeneratedFile {
   path: string;
@@ -190,4 +191,77 @@ test("weights sum correctly", () => {
     result.documentation * 0.2 +
     result.performance * 0.25;
   expect(Math.abs(result.overall - expected)).toBeLessThan(1);
+});
+
+// ---------- Calibration against real APIs ----------
+
+describe("calibration against real APIs", () => {
+  test("security-headers scores >= 25 overall with >= 30 richness", async () => {
+    // Hand-built APIs predate envelope/performance requirements, so overall is low
+    // but richness and docs should be reasonable
+    const securityHeadersIndex = await Bun.file(
+      join(import.meta.dir, "../../apis/security-headers/index.ts")
+    ).text();
+    const files = [{ path: "index.ts", content: securityHeadersIndex }];
+    const result = scoreQuality(files);
+    console.log("security-headers calibration:", JSON.stringify(result));
+    expect(result.overall).toBeGreaterThanOrEqual(25);
+    expect(result.richness).toBeGreaterThanOrEqual(30);
+  });
+
+  test("seo-audit scores >= 25 overall with >= 30 richness", async () => {
+    // Hand-built APIs predate envelope/performance requirements
+    const seoAuditIndex = await Bun.file(
+      join(import.meta.dir, "../../apis/seo-audit/index.ts")
+    ).text();
+    const files = [{ path: "index.ts", content: seoAuditIndex }];
+    const result = scoreQuality(files);
+    console.log("seo-audit calibration:", JSON.stringify(result));
+    expect(result.overall).toBeGreaterThanOrEqual(25);
+    expect(result.richness).toBeGreaterThanOrEqual(30);
+  });
+
+  test("60 threshold is achievable with envelope", async () => {
+    const securityHeadersIndex = await Bun.file(
+      join(import.meta.dir, "../../apis/security-headers/index.ts")
+    ).text();
+
+    // Append envelope + docs + performance patterns to simulate a well-structured API
+    const enhanced = securityHeadersIndex + `
+// Enhanced with response envelope
+interface EnvelopeResponse {
+  status: string;
+  data: AnalysisResult;
+  meta: { timestamp: string; duration_ms: number; api_version: string };
+}
+
+/** Main analysis endpoint with full envelope */
+const start = performance.now();
+const [res1, res2] = await Promise.all([
+  safeFetch(url, { signal: AbortSignal.timeout(10000) }),
+  safeFetch(url, { signal: AbortSignal.timeout(10000) }),
+]);
+const body = await readBodyCapped(res1, 50000);
+const duration_ms = Math.round(performance.now() - start);
+return c.json({ status: "ok", data: result, meta: { timestamp: new Date().toISOString(), duration_ms, api_version: "1.0.0" } });
+
+// Documentation
+app.get("/", (c) => c.json({
+  api: "security-headers",
+  status: "healthy",
+  version: "1.0.0",
+  docs: {
+    endpoints: [{ method: "GET", path: "/analyze", description: "Analyze security headers" }],
+    parameters: [{ name: "url", type: "string", required: true }],
+    examples: [{ request: "GET /analyze?url=https://example.com", response: { severity: 85 } }],
+  },
+  pricing: { price: "$0.005", protocol: "x402" },
+}));
+`;
+
+    const files = [{ path: "index.ts", content: enhanced }];
+    const result = scoreQuality(files);
+    console.log("security-headers+envelope calibration:", JSON.stringify(result));
+    expect(result.overall).toBeGreaterThanOrEqual(60);
+  });
 });
