@@ -5,6 +5,9 @@ import db, {
 } from "../../shared/db";
 import { join, resolve } from "path";
 import { chat } from "../../shared/llm";
+import { getReferencesForCategory } from "./reference-selector";
+import { competitiveResearch } from "./competitive-research";
+import { scoreQuality } from "./quality-scorer";
 
 const ESCALATION_MODEL = process.env.SCOUT_ESCALATION_MODEL || "gpt-4.1";
 const DEFAULT_MODEL = "gpt-4.1-mini";
@@ -35,54 +38,8 @@ const TEST_KILL_TIMEOUT_MS = 10_000;
 // Reference material for the LLM
 // ---------------------------------------------------------------------------
 
-async function getReference(): Promise<string> {
-  const [webCheckerIndex, webCheckerChecker, emailVerifyIndex, emailVerifyChecker] = await Promise.all([
-    Bun.file(join(APIS_DIR, "web-checker/index.ts")).text(),
-    Bun.file(join(APIS_DIR, "web-checker/checker.ts")).text(),
-    Bun.file(join(APIS_DIR, "email-verify/index.ts")).text(),
-    Bun.file(join(APIS_DIR, "email-verify/checker.ts")).text(),
-  ]);
-
-  return `
-=== REFERENCE: apis/web-checker/index.ts ===
-${webCheckerIndex}
-
-=== REFERENCE: apis/web-checker/checker.ts ===
-${webCheckerChecker}
-
-=== REFERENCE: apis/email-verify/index.ts ===
-${emailVerifyIndex}
-
-=== REFERENCE: apis/email-verify/checker.ts ===
-${emailVerifyChecker}
-
-=== SHARED MODULE SIGNATURES ===
-shared/x402.ts exports:
-  paymentMiddleware(routes, resourceServer) — Hono middleware, dual-rail x402+MPP payment gate
-  paidRouteWithDiscovery(price, description, discovery) — route config with bazaar discovery
-  resourceServer — pre-configured x402ResourceServer instance
-  WALLET_ADDRESS, NETWORK
-
-shared/x402-wallet.ts exports:
-  extractPayerWallet() — Hono middleware, sets c.set("payerWallet", address)
-
-shared/spend-cap.ts exports:
-  spendCapMiddleware() — Hono middleware, enforces per-wallet daily/monthly spend caps
-
-shared/logger.ts exports:
-  apiLogger(apiName, priceUsd) — Hono middleware, logs requests and revenue
-
-shared/rate-limit.ts exports:
-  rateLimit(zone, maxRequests, windowMs) — Hono middleware
-
-shared/ssrf.ts exports:
-  safeFetch(url, opts?) — SSRF-safe fetch with redirect validation (for APIs that fetch external URLs)
-  validateExternalUrl(raw) — returns { url: URL } | { error: string }
-  readBodyCapped(res, maxBytes) — read response body with size limit
-
-shared/db.ts exports:
-  default db, logRequest(), logRevenue(), registerApi(name, port, subdomain), etc.
-`;
+async function getReference(category?: string): Promise<string> {
+  return getReferencesForCategory(category ?? "security", APIS_DIR);
 }
 
 // ---------------------------------------------------------------------------
@@ -115,9 +72,11 @@ async function generateApi(
   name: string,
   description: string,
   errorFeedback?: string,
-  model: string = DEFAULT_MODEL
+  model: string = DEFAULT_MODEL,
+  category?: string,
+  competitiveContext?: string,
 ): Promise<GeneratedFile[]> {
-  const reference = await getReference();
+  const reference = await getReference(category);
 
   // Wrap the untrusted name and description in explicit <data> delimiters.
   // The system prompt in shared/llm.ts instructs the model to treat content
@@ -151,6 +110,43 @@ QUALITY STANDARDS — this API must justify its price by providing DEPTH:
 - Use helper files for business logic — keep index.ts for routing, put analysis in separate .ts files
 - Use TypeScript types for all data structures
 
+RESPONSE FORMAT -- ALL endpoints MUST use this envelope:
+{
+  "status": "ok",
+  "data": { ... },
+  "meta": {
+    "timestamp": "ISO8601",
+    "duration_ms": 142,
+    "api_version": "1.0.0"
+  }
+}
+
+Error responses:
+{
+  "status": "error",
+  "error": "Human-readable error message",
+  "detail": "Technical detail for debugging",
+  "meta": { "timestamp": "...", "duration_ms": 0, "api_version": "1.0.0" }
+}
+
+TIMING PATTERN (use in every handler):
+const start = performance.now();
+// ... analysis logic ...
+const duration_ms = Math.round(performance.now() - start);
+return c.json({ status: "ok", data: result, meta: { timestamp: new Date().toISOString(), duration_ms, api_version: "1.0.0" } });
+
+RICHNESS REQUIREMENTS:
+- Response data MUST have 5+ distinct typed fields (not just a single string or boolean)
+- Include an "explanation" or "details" field with human-readable analysis text
+- Include severity/score/grade where applicable (0-100 numeric score + letter grade A-F)
+- Include "recommendations" array with actionable fix suggestions, each having { issue, severity, suggestion }
+- Define TypeScript interfaces for all response shapes
+
+DOCUMENTATION REQUIREMENTS:
+- The / info endpoint MUST return: { api, status, version, docs: { endpoints: [...], parameters: [...], examples: [...] }, pricing: {...} }
+- Each endpoint in docs must list: method, path, description, parameters, example response
+
+${competitiveContext ? `\n${competitiveContext}\n` : ""}
 Technical requirements:
 1. Use Hono framework (import { Hono } from "hono")
 2. Export a named \`app\` (the Hono instance)
@@ -951,14 +947,26 @@ export async function build(): Promise<boolean> {
     }
   }
 
-  // Retry loop: generate -> output-validate -> audit -> test locally
+  // Pre-build competitive research (QUAL-09)
+  const category = (item as any).category || "security";
+  let competitiveContext = "";
+  try {
+    competitiveContext = competitiveResearch(name, description, category);
+    if (competitiveContext) {
+      console.log(`[build] Competitive research: found differentiation context for ${category}`);
+    }
+  } catch (e) {
+    console.warn(`[build] Competitive research failed (non-blocking): ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  // Retry loop: generate -> output-validate -> audit -> quality-score -> test locally
   let lastError: string | undefined;
   let successFiles: GeneratedFile[] | undefined;
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     console.log(`[build] Attempt ${attempt}/${MAX_RETRIES}`);
 
-    const files = await generateApi(name, description, lastError, model);
+    const files = await generateApi(name, description, lastError, model, category, competitiveContext);
     if (files.length === 0) {
       lastError = "LLM returned no files";
       continue;
@@ -984,6 +992,19 @@ export async function build(): Promise<boolean> {
       continue;
     }
     console.log("[build] Security audit passed");
+
+    // Quality scoring gate (QUAL-08)
+    const qualityResult = scoreQuality(files);
+    console.log(`[build] Quality score: ${qualityResult.overall}/100 (richness=${qualityResult.richness}, errors=${qualityResult.error_handling}, docs=${qualityResult.documentation}, perf=${qualityResult.performance})`);
+    for (const detail of qualityResult.details) {
+      console.log(`[build]   ${detail}`);
+    }
+    if (!qualityResult.pass) {
+      lastError = `Quality score ${qualityResult.overall}/100 (minimum 60 required).\n\n${qualityResult.feedback}\n\nFix these quality issues in your next attempt.`;
+      console.warn(`[build] Attempt ${attempt} failed quality gate (${qualityResult.overall}/100)`);
+      continue;
+    }
+    console.log("[build] Quality gate passed");
 
     // Local testing
     const result = await testLocally(name, files);
