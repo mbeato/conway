@@ -13,7 +13,7 @@ export interface AuthRateZoneConfig {
 }
 
 export const AUTH_RATE_ZONES: Record<string, AuthRateZoneConfig> = {
-  signup: { maxRequests: 5, windowMs: 3600_000, keyBy: "ip" },
+  signup: { maxRequests: 3, windowMs: 3600_000, keyBy: "ip" },
   login: { maxRequests: 10, windowMs: 60_000, keyBy: "ip" },
   "password-reset-ip": { maxRequests: 5, windowMs: 3600_000, keyBy: "ip" },
   "password-reset-email": { maxRequests: 3, windowMs: 3600_000, keyBy: "email" },

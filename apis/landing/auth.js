@@ -381,10 +381,13 @@
 
       setLoading(btn, true);
 
+      var honeypotEl = document.getElementById("website");
+      var honeypot = honeypotEl ? honeypotEl.value : "";
+
       fetch("/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
-        body: JSON.stringify({ email: email, password: password, tos_agree: true }),
+        body: JSON.stringify({ email: email, password: password, tos_agree: true, website: honeypot }),
       })
         .then(function (res) {
           return res.json().then(function (data) {

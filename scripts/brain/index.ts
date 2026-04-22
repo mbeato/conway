@@ -13,6 +13,7 @@ import { mcpClientMonitor } from "./mcp-client-monitor";
 import { digest } from "./digest";
 import { githubEngage } from "./github-engage";
 import { directoryTracker } from "./directory-tracker";
+import { reapUnverifiedUsers } from "../reap-unverified";
 
 async function main() {
   const timestamp = new Date().toISOString();
@@ -31,6 +32,14 @@ async function main() {
   // Step 1: Monitor — always runs
   console.log("[brain] Step 1: Monitor");
   const health = await monitor();
+
+  // Step 1.2: Reap unverified signups (bot spam)
+  try {
+    const reaped = reapUnverifiedUsers(24);
+    if (reaped > 0) console.log(`[brain] Reaped ${reaped} unverified user(s)`);
+  } catch (e) {
+    console.error(`[brain] Reap failed:`, e instanceof Error ? e.message : e);
+  }
 
   // Step 1.5: Scanner — scan MPP ecosystem for new projects (weekly)
   if (dayOfWeek === 0) {

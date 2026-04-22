@@ -553,7 +553,15 @@ app.post("/auth/signup", authLimit, async (c) => {
     return c.json({ error: "Invalid JSON" }, 400);
   }
 
-  const { email, password, tos_agree } = body;
+  const { email, password, tos_agree, website } = body;
+
+  // Honeypot: real form hides "website" with CSS; real users never fill it.
+  // Bots that submit every field trip this and get a generic error.
+  if (typeof website === "string" && website.length > 0) {
+    logAuthEvent(db, null, "signup_honeypot", ip, userAgent);
+    return c.json({ error: "Signup failed" }, 400);
+  }
+
   if (!email || !password) {
     return c.json({ error: "Email and password are required" }, 400);
   }
