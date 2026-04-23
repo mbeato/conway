@@ -3,9 +3,11 @@ import db, {
   updateBacklogStatus,
   registerApi,
 } from "../../shared/db";
-import { join, resolve } from "path";
+import { join, resolve, relative } from "path";
+import { readdir, readFile } from "fs/promises";
 import { tmpdir } from "os";
 import { chat } from "../../shared/llm";
+import { commitFilesToGithub, type CommitFile } from "../../shared/github-commit";
 import { getReferencesForCategory } from "./reference-selector";
 import { competitiveResearch } from "./competitive-research";
 import { scoreQuality } from "./quality-scorer";
@@ -915,8 +917,73 @@ export async function build(): Promise<boolean> {
   registerApi(name, 3001, name);
   updateBacklogStatus(item.id, "deployed");
 
+  // Push new API sources + updated registry.ts to GitHub so the repo stays
+  // aligned with what's actually running on prod. Non-fatal on failure: prod
+  // is already serving traffic, the manual sync path (rsync prod → local)
+  // still works as a fallback.
+  try {
+    await syncNewApiToGithub(name);
+  } catch (err) {
+    console.error(
+      `[build] GitHub sync failed for ${name} (prod deploy still good):`,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
   console.log(`[build] Successfully built and deployed: ${name}`);
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Ship new API to GitHub via git-data API — atomic multi-file commit.
+// ---------------------------------------------------------------------------
+async function syncNewApiToGithub(name: string): Promise<void> {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    console.log(`[build] GITHUB_TOKEN not set — skipping GitHub sync for ${name}`);
+    return;
+  }
+
+  const apiDir = join(APIS_DIR, name);
+  const filePaths = await collectFilesRecursive(apiDir);
+  const files: CommitFile[] = [];
+  for (const abs of filePaths) {
+    const rel = relative(PROJECT_DIR, abs);
+    files.push({ path: rel, content: await readFile(abs, "utf-8") });
+  }
+  // Registry update always ships with the API so the repo is consistent.
+  files.push({
+    path: relative(PROJECT_DIR, REGISTRY_PATH),
+    content: await readFile(REGISTRY_PATH, "utf-8"),
+  });
+
+  const result = await commitFilesToGithub({
+    owner: "mbeato",
+    repo: "conway",
+    branch: "main",
+    message: `feat(brain): ship ${name} API`,
+    files,
+    token,
+  });
+  if (!result.ok) {
+    console.error(`[build] GitHub commit failed for ${name}: ${result.error}`);
+    return;
+  }
+  console.log(`[build] Pushed ${files.length} files to GitHub for ${name} (${result.sha?.slice(0, 7)})`);
+}
+
+async function collectFilesRecursive(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  const entries = await readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...(await collectFilesRecursive(full)));
+    } else if (entry.isFile()) {
+      out.push(full);
+    }
+  }
+  return out;
 }
 
 // Run directly
