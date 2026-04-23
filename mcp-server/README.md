@@ -1,6 +1,6 @@
 # APIMesh MCP Server
 
-23 pay-per-call web analysis APIs as MCP tools for Claude, Cursor, Windsurf, Cline, and any MCP-compatible client.
+65 pay-per-call web analysis APIs as MCP tools (plus wallet usage + spend caps — 67 total) for Claude, Cursor, Windsurf, Cline, and any MCP-compatible client.
 
 ## Install
 

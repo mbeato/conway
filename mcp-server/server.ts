@@ -109,7 +109,7 @@ function qs(params: Record<string, string | number | undefined>): string {
 export function createServer(): McpServer {
   const server = new McpServer({
     name: "apimesh",
-    version: "1.7.0",
+    version: "1.8.0",
   });
 
   server.tool(
@@ -377,6 +377,435 @@ export function createServer(): McpServer {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ daily_limit_usd, monthly_limit_usd, label: label ?? null }),
       }),
+  );
+
+  // Brain-built APIs — wrappers generated from each API's self-documented GET / spec
+
+  server.tool(
+    "subdomain_vulnerability_rankings",
+    "Paid comprehensive subdomain enumeration and vulnerability ranking",
+    {
+      domain: z.string().describe("Domain name to scan, e.g., example.com"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-vulnerability-rankings.apimesh.xyz/assess${qs({ domain })}`),
+  );
+
+  server.tool(
+    "csp_policy_heuristics",
+    "Paid comprehensive audit with advanced heuristic analysis, web crawling, scoring, and detailed recommendations",
+    {
+      url: z.string().describe("Target URL to analyze"),
+    },
+    async ({ url }) =>
+      callApi(`https://csp-policy-heuristics.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "ssl_tls_risk_analyzer",
+    "Aggregates SSL/TLS configuration details from public scans, DNS records, and certificate transparency logs, then performs a risk assessment",
+    {
+      host: z.string().describe("Hostname or URL to analyze (http(s):// optional)"),
+    },
+    async ({ host }) =>
+      callApi(`https://ssl-tls-risk-analyzer.apimesh.xyz/analyze${qs({ host })}`),
+  );
+
+  server.tool(
+    "subdomain_vulnerability_ranking",
+    "Paid comprehensive subdomain enumeration and vulnerability ranking",
+    {
+      domain: z.string().describe("Domain to enumerate e.g. example.com"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-vulnerability-ranking.apimesh.xyz/scan${qs({ domain })}`),
+  );
+
+  server.tool(
+    "subdomain_exposure_score",
+    "Paid comprehensive full subdomain exposure scoring and audit report",
+    {
+      domain: z.string().describe("Domain name to analyze subdomains for"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-exposure-score.apimesh.xyz/scan${qs({ domain })}`),
+  );
+
+  server.tool(
+    "ip_infrastructure_analyst",
+    "Analyze an IP address for ASN, ISP, geolocation, and routing info; returns comprehensive report with scoring and recommendations",
+    {
+      ip: z.string().describe("IPv4 or IPv6 address to analyze"),
+    },
+    async ({ ip }) =>
+      callApi(`https://ip-infrastructure-analyst.apimesh.xyz/analyze${qs({ ip })}`),
+  );
+
+  server.tool(
+    "subdomain_exposure_scorer",
+    "Comprehensive enumeration and exposure scoring of all detected subdomains for a domain",
+    {
+      domain: z.string().describe("Base domain, e.g. example.com"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-exposure-scorer.apimesh.xyz/check${qs({ domain })}`),
+  );
+
+  server.tool(
+    "ssl_tls_threat_assessment",
+    "Comprehensive TLS security threat assessment for a domain",
+    {
+      domain: z.string().describe("The domain or hostname to assess SSL/TLS configurations for"),
+    },
+    async ({ domain }) =>
+      callApi(`https://ssl-tls-threat-assessment.apimesh.xyz/assess${qs({ domain })}`),
+  );
+
+  server.tool(
+    "privacy_policy_qualify",
+    "Fetch and analyze privacy policies across domains for GDPR/CCPA compliance and data sharing signals",
+    {
+      url: z.string().describe("URL to privacy policy or site landing page (http or https)"),
+    },
+    async ({ url }) =>
+      callApi(`https://privacy-policy-qualify.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "dns_propagation_mapper",
+    "Comprehensive DNS propagation audit across multiple global DNS resolvers with delay correlation, misconfiguration detection, scoring, grading, and recommendations",
+    {
+      domain: z.string().describe("Domain name to check propagation status for"),
+      recordType: z.string().optional().describe("DNS record type to evaluate, e.g. A, AAAA, CNAME, TXT"),
+    },
+    async ({ domain, recordType }) =>
+      callApi(`https://dns-propagation-mapper.apimesh.xyz/check${qs({ domain, recordType })}`),
+  );
+
+  server.tool(
+    "ip_infrastructure_analyzer",
+    "Comprehensive IP infrastructure analysis: ASN, ISP, geolocation, routing checks, scoring, recommendations",
+    {
+      ip: z.string().describe("IPv4 or IPv6 address to analyze (required)"),
+    },
+    async ({ ip }) =>
+      callApi(`https://ip-infrastructure-analyzer.apimesh.xyz/analyze${qs({ ip })}`),
+  );
+
+  server.tool(
+    "ip_geolocation_enrichment",
+    "Enrich an IP address with detailed ASN, ISP, geolocation, and routing data",
+    {
+      ip: z.string().describe("IPv4 or IPv6 address to analyze"),
+    },
+    async ({ ip }) =>
+      callApi(`https://ip-geolocation-enrichment.apimesh.xyz/enrich${qs({ ip })}`),
+  );
+
+  server.tool(
+    "website_authenticity_assessment",
+    "Comprehensive website authenticity assessment combining SSL cert validation, DNS records, redirect chain analysis, and server headers",
+    {
+      url: z.string().describe("Target website URL (http(s)://...)"),
+    },
+    async ({ url }) =>
+      callApi(`https://website-authenticity-assessment.apimesh.xyz/assess${qs({ url })}`),
+  );
+
+  server.tool(
+    "ssl_and_tls_hardening_score",
+    "Run full SSL, TLS, and HTTP security header comprehensive hardening score with actionable recommendations",
+    {
+      url: z.string().describe("HTTPS URL to analyze (http:// will be rejected)"),
+    },
+    async ({ url }) =>
+      callApi(`https://ssl-and-tls-hardening-score.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "security_headers_checker",
+    "Perform a comprehensive security headers audit with detailed scoring and remediation",
+    {
+      url: z.string().describe("Full URL starting with http(s)://"),
+    },
+    async ({ url }) =>
+      callApi(`https://security-headers-checker.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "subdomain_exposure_ranking",
+    "Comprehensive paid scan: exhaustive subdomain enumeration from DNS, CT logs, plus HTTP endpoint probing, header analysis, TLS version checks, outdated service detection, with full scoring and rich recommendations",
+    {
+      domain: z.string().describe("Root domain to enumerate and analyze"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-exposure-ranking.apimesh.xyz/check${qs({ domain })}`),
+  );
+
+  server.tool(
+    "ssl_tls_hardening_forecast",
+    "Analyze SSL/TLS info and forecast renewal and security outlook with detailed alerts and recommendations",
+    {
+      host: z.string().describe("Hostname to analyze (no scheme)"),
+    },
+    async ({ host }) =>
+      callApi(`https://ssl-tls-hardening-forecast.apimesh.xyz/forecast${qs({ host })}`),
+  );
+
+  server.tool(
+    "subdomain_exposure_rankings",
+    "Paid, comprehensive analysis of subdomain exposure and security ranking",
+    {
+      domain: z.string().describe("Root domain to enumerate and analyze"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-exposure-rankings.apimesh.xyz/check${qs({ domain })}`),
+  );
+
+  server.tool(
+    "ssl_tls_expiry_forecast",
+    "Comprehensive SSL/TLS certificate and protocol expiry forecast for multiple domains",
+    {
+      domains: z.string().describe("Comma separated domains to analyze (required, max 10 domains)"),
+    },
+    async ({ domains }) =>
+      callApi(`https://ssl-tls-expiry-forecast.apimesh.xyz/forecast${qs({ domains })}`),
+  );
+
+  server.tool(
+    "network_route_mapper",
+    "Paid comprehensive analysis of network routing paths including ASN hops, geolocation, latency, suspicion scoring, and remediation",
+    {
+      target: z.string().describe("Target IP address or domain name to analyze"),
+    },
+    async ({ target }) =>
+      callApi(`https://network-route-mapper.apimesh.xyz/route${qs({ target })}`),
+  );
+
+  server.tool(
+    "subdomain_exposure_heatmap",
+    "Exhaustive subdomain enumeration from multiple sources, risk analysis, exposure scoring, recommendations and heatmap report",
+    {
+      domain: z.string().describe("Root domain to audit (e.g. example.com)"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-exposure-heatmap.apimesh.xyz/heatmap${qs({ domain })}`),
+  );
+
+  server.tool(
+    "dns_propagation_simulator",
+    "Simulate DNS record propagation across multiple DNS resolvers with delay estimation and misconfiguration detection",
+    {
+      domain: z.string().describe("Domain name to check (e.g. example.com)"),
+      recordType: z.string().optional().describe("DNS record type to query (A, AAAA, CNAME, TXT, etc.). Defaults to A."),
+    },
+    async ({ domain, recordType }) =>
+      callApi(`https://dns-propagation-simulator.apimesh.xyz/simulate${qs({ domain, recordType })}`),
+  );
+
+  server.tool(
+    "ssl_tls_configuration_ranker",
+    "Perform a deep, comprehensive SSL/TLS configuration audit of a target site",
+    {
+      url: z.string().describe("URL of the target site (https://...)"),
+    },
+    async ({ url }) =>
+      callApi(`https://ssl-tls-configuration-ranker.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "privacy_policy_enricher",
+    "Fetch and analyze a privacy policy URL, combining multiple signals for GDPR and CCPA compliance, data sharing practices, and privacy features",
+    {
+      url: z.string().describe("Public URL of privacy policy page to analyze (HTTP or HTTPS)"),
+    },
+    async ({ url }) =>
+      callApi(`https://privacy-policy-enricher.apimesh.xyz/enrich${qs({ url })}`),
+  );
+
+  server.tool(
+    "privacy_risk_score",
+    "Comprehensive privacy risk analysis of a domain's publicly available privacy policies and disclosures",
+    {
+      url: z.string().describe("Public URL of the domain's homepage or privacy policy"),
+    },
+    async ({ url }) =>
+      callApi(`https://privacy-risk-score.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "http_method_enumeration",
+    "Full enumeration of HTTP methods supported by a target URL with scoring and analysis",
+    {
+      url: z.string().describe("Target URL (must be a valid HTTP or HTTPS URL, max 2048 characters)"),
+    },
+    async ({ url }) =>
+      callApi(`https://http-method-enumeration.apimesh.xyz/enumerate${qs({ url })}`),
+  );
+
+  server.tool(
+    "web_misconfiguration_scan",
+    "Run a comprehensive security misconfiguration scan against the specified URL",
+    {
+      url: z.string().describe("Target URL to scan (http or https)"),
+    },
+    async ({ url }) =>
+      callApi(`https://web-misconfiguration-scan.apimesh.xyz/scan${qs({ url })}`),
+  );
+
+  server.tool(
+    "dependency_license_audit",
+    "Comprehensive license audit across multiple project manifests and license databases with risk scoring",
+    {
+      manifest_urls: z.string().describe("Comma-separated list of public URLs to project manifest files (package.json, requirements.txt, pom.xml, etc.)"),
+      includeDev: z.boolean().optional().describe("Optional flag to include devDependencies or test dependencies"),
+    },
+    async ({ manifest_urls, includeDev }) =>
+      callApi(`https://dependency-license-audit.apimesh.xyz/audit${qs({ manifest_urls, includeDev })}`),
+  );
+
+  server.tool(
+    "ssl_tls_configuration_forecast",
+    "Comprehensive paid SSL/TLS configuration forecast and security score for a domain",
+    {
+      domain: z.string().describe("Domain name to analyze (e.g. example.com)"),
+    },
+    async ({ domain }) =>
+      callApi(`https://ssl-tls-configuration-forecast.apimesh.xyz/check${qs({ domain })}`),
+  );
+
+  server.tool(
+    "subdomain_risk_ranking",
+    "Perform a deep, comprehensive subdomain enumeration and risk ranking audit",
+    {
+      domain: z.string().describe("The root domain to enumerate subdomains for (e.g. example.com)"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-risk-ranking.apimesh.xyz/rank${qs({ domain })}`),
+  );
+
+  server.tool(
+    "content_shuffle_detector",
+    "Paid comprehensive audit with multiple fetches, deep NLP content variation analysis, content diffing, and scoring to detect content shuffling and obfuscation",
+    {
+      url: z.string().describe("The target URL (http(s)://...)"),
+    },
+    async ({ url }) =>
+      callApi(`https://content-shuffle-detector.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "api_schema_diff",
+    "Compare multiple API schema versions (REST or GraphQL) to highlight differences and score compatibility",
+    {
+      schemas: z.string().describe("List of schema URLs and version labels to compare"),
+    },
+    async ({ schemas }) =>
+      callApi(`https://api-schema-diff.apimesh.xyz/compare${qs({ schemas })}`),
+  );
+
+  server.tool(
+    "api_linting",
+    "Run a comprehensive linting and validation on provided OpenAPI spec and implementation URLs",
+    {
+      spec_url: z.string().describe("URL to the OpenAPI specification document (JSON or YAML)."),
+      impl_url: z.string().describe("URL to the live API endpoint to test actual implementation."),
+    },
+    async ({ spec_url, impl_url }) =>
+      callApi(`https://api-linting.apimesh.xyz/lint${qs({ spec_url, impl_url })}`),
+  );
+
+  server.tool(
+    "port_scanner_aggregate",
+    "Deep scan of a list of IP addresses or CIDR ranges with multi-source aggregation and vulnerability scoring",
+    {
+      targets: z.string().describe("List of IP addresses (IPv4 or v6) or CIDR ranges to scan."),
+      maxPorts: z.number().optional().describe("Optional limit on number of top common ports to scan per host (default 100)."),
+    },
+    async ({ targets, maxPorts }) =>
+      callApi(`https://port-scanner-aggregate.apimesh.xyz/scan${qs({ targets, maxPorts })}`),
+  );
+
+  server.tool(
+    "cdn_infrastructure_enricher",
+    "Comprehensive paid audit integrating DNS, HTTP headers, IP and regional info with detailed scoring and recommendations",
+    {
+      url: z.string().describe("Target website URL (http(s)://...) to deeply analyze."),
+    },
+    async ({ url }) =>
+      callApi(`https://cdn-infrastructure-enricher.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "web_configuration_audit",
+    "Comprehensive paid audit with detailed scoring, grade, meta tags, and .env leak detection",
+    {
+      url: z.string().describe("URL to audit (http(s)://...)"),
+    },
+    async ({ url }) =>
+      callApi(`https://web-configuration-audit.apimesh.xyz/check${qs({ url })}`),
+  );
+
+  server.tool(
+    "subdomain_vulnerability_ranker",
+    "Exhaustive subdomain enumeration, vulnerability inference, scoring, and recommendations",
+    {
+      domain: z.string().describe("Target root domain (e.g. example.com)"),
+    },
+    async ({ domain }) =>
+      callApi(`https://subdomain-vulnerability-ranker.apimesh.xyz/scan${qs({ domain })}`),
+  );
+
+  server.tool(
+    "ssl_tls_inception_score",
+    "Comprehensive SSL/TLS certificate and protocol audit for the specified hostname or URL",
+    {
+      hostname: z.string().describe("Hostname or URL (http(s):// or plain hostname) to analyze SSL/TLS for"),
+    },
+    async ({ hostname }) =>
+      callApi(`https://ssl-tls-inception-score.apimesh.xyz/check${qs({ hostname })}`),
+  );
+
+  server.tool(
+    "dns_propagation_heatmap",
+    "Paid comprehensive DNS propagation audit across multiple resolver types, including scoring and actionable recommendations",
+    {
+      record: z.string().describe("DNS record full domain name"),
+      type: z.string().describe("DNS record type to query"),
+    },
+    async ({ record, type }) =>
+      callApi(`https://dns-propagation-heatmap.apimesh.xyz/check${qs({ record, type })}`),
+  );
+
+  server.tool(
+    "api_schema_delta",
+    "Compare multiple API schemas from given URLs and return detailed diff and evolution analysis",
+    {
+      urls: z.string().describe("Array of schema URLs to fetch and compare"),
+      type: z.string().describe("Type of schema, either REST JSON Schema or GraphQL SDL"),
+    },
+    async ({ urls, type }) =>
+      callApi(`https://api-schema-delta.apimesh.xyz/compare${qs({ urls, type })}`),
+  );
+
+  server.tool(
+    "port_scanner",
+    "Perform a deep port scan on a target IP or hostname",
+    {
+      target: z.string().describe("Target IP or hostname to scan"),
+    },
+    async ({ target }) =>
+      callApi(`https://port-scanner.apimesh.xyz/scan${qs({ target })}`),
+  );
+
+  server.tool(
+    "ssl_tls_hardening_assessor",
+    "Get a comprehensive SSL/TLS and DNS record security assessment for a hostname",
+    {
+      host: z.string().describe("Hostname to analyze, e.g. example.com"),
+    },
+    async ({ host }) =>
+      callApi(`https://ssl-tls-hardening-assessor.apimesh.xyz/check${qs({ host })}`),
   );
 
   return server;
