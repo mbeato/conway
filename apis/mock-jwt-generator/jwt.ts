@@ -40,16 +40,11 @@ export async function generateMockJwt(
     const headerEncoded = base64url(encoder.encode(JSON.stringify(headerData)));
     const payloadEncoded = base64url(encoder.encode(JSON.stringify(payload)));
     const signingInput = `${headerEncoded}.${payloadEncoded}`;
-    // HMAC SHA256 signature
+    // HMAC SHA256 signature — WebCrypto path. Bun.CryptoHasher.hmac is not a
+    // static method in current Bun (only `hash` + an instance API); use the
+    // cross-runtime crypto.subtle instead.
     let key: CryptoKey;
-    if (typeof Bun !== 'undefined' && Bun.CryptoHasher) {
-      // Bun has built-in HMAC utils
-      const signature = Buffer.from(
-        Bun.CryptoHasher
-          .hmac('sha256', secret, signingInput)
-      );
-      return { token: `${signingInput}.${base64url(signature)}` };
-    } else if (typeof crypto !== 'undefined' && crypto.subtle) {
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
       // WebCrypto
       key = await crypto.subtle.importKey(
         'raw',

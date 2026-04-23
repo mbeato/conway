@@ -52,6 +52,31 @@ app.get("/", c => {
   });
 });
 
+// Free preview (no payment required) — syntax check only, <=500 chars
+app.get("/preview", rateLimit("yaml-validator-preview", 30, 60_000), async c => {
+  const yaml = c.req.query("yaml");
+  if (yaml === undefined) {
+    return c.json({ error: "Provide ?yaml= parameter (URL-encoded YAML, max 500 chars)" }, 400);
+  }
+  if (yaml.length === 0) {
+    return c.json({ error: "Blank YAML input" }, 400);
+  }
+  if (yaml.length > 500) {
+    return c.json({ error: "Preview limited to 500 characters. Pay for full size support." }, 400);
+  }
+
+  const result = validateYaml(yaml);
+  const response: { valid: boolean; error?: string; preview: true; note: string } = {
+    preview: true,
+    valid: result.valid,
+    note: "Preview validates syntax only for inputs under 500 chars. Pay for schema validation, parsed output, and unlimited size.",
+  };
+  if (!result.valid) {
+    response.error = result.errors?.[0]?.message || "YAML parse error";
+  }
+  return c.json(response);
+});
+
 app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(

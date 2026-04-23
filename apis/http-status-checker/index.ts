@@ -40,6 +40,28 @@ app.get("/", (c) => {
   });
 });
 
+// Free preview — returns status code + final URL only (no timing/redirect chain, no payment)
+app.get("/preview", rateLimit("http-status-checker-preview", 30, 60_000), async (c) => {
+  const url = c.req.query("url");
+  if (!url) {
+    return c.json({ error: "Missing required ?url parameter" }, 400);
+  }
+
+  const check = validateExternalUrl(url);
+  if ("error" in check) {
+    return c.json({ error: check.error }, 400);
+  }
+
+  const result = await checkHttpStatus(check.url.toString(), 200);
+  return c.json({
+    url: result.url,
+    status: result.actual ?? null,
+    preview: true,
+    checkedAt: result.checkedAt,
+    note: "Preview returns status code only. Pay for redirect chain, timing, and body snippets.",
+  });
+});
+
 app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(

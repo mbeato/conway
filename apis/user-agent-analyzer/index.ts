@@ -40,6 +40,46 @@ app.get("/", (c) =>
   })
 );
 
+// Free preview — browser name + OS name only (no version, engine, device, or bot detection)
+app.get("/preview", rateLimit(API_NAME + "-preview", 30, 60_000), async (c) => {
+  let ua = c.req.query("ua");
+  if (!ua) {
+    ua = c.req.header("user-agent") || "";
+  }
+  ua = ua?.toString().trim() ?? "";
+
+  if (!ua) {
+    return c.json({ error: "Provide ?ua= parameter or User-Agent HTTP header." }, 400);
+  }
+  if (ua.length < 6 || ua.length > 512) {
+    return c.json({ error: "User-Agent string must be 6-512 characters." }, 400);
+  }
+
+  let browser = "unknown";
+  if (/Edg|Edge|EdgiOS|EdgA\//.test(ua)) browser = "Edge";
+  else if (/OPR|Opera\//.test(ua)) browser = "Opera";
+  else if (/Chrome\//.test(ua)) browser = "Chrome";
+  else if (/Firefox\//.test(ua)) browser = "Firefox";
+  else if (/Version\/.*Safari/.test(ua)) browser = "Safari";
+  else if (/MSIE|Trident\//.test(ua)) browser = "IE";
+
+  let os = "unknown";
+  if (/Windows NT/.test(ua)) os = "Windows";
+  else if (/iPhone|iPad/.test(ua)) os = "iOS";
+  else if (/Mac OS X/.test(ua)) os = "macOS";
+  else if (/Android/.test(ua)) os = "Android";
+  else if (/CrOS/.test(ua)) os = "Chrome OS";
+  else if (/Linux/.test(ua)) os = "Linux";
+
+  return c.json({
+    browser,
+    os,
+    preview: true,
+    analyzedAt: new Date().toISOString(),
+    note: "Preview detects browser name + OS. Pay for engine, device, version, bot classification, and language.",
+  });
+});
+
 app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(

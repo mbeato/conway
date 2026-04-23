@@ -55,6 +55,46 @@ app.get("/", (c) => {
   });
 });
 
+// Free preview (no payment required) — minimal single-endpoint stub
+app.get("/preview", rateLimit("swagger-docs-creator-preview", 30, 60_000), async (c) => {
+  const path = c.req.query("path");
+  const methodRaw = c.req.query("method");
+  if (!path || !methodRaw) {
+    return c.json({ error: "Provide ?path= and ?method= parameters (e.g. /preview?path=/users&method=GET)" }, 400);
+  }
+  if (!path.startsWith("/") || path.length > 200) {
+    return c.json({ error: "path must start with '/' and be under 200 chars" }, 400);
+  }
+  const method = methodRaw.toLowerCase();
+  const allowedMethods = ["get", "post", "put", "delete", "patch", "head", "options"];
+  if (!allowedMethods.includes(method)) {
+    return c.json({ error: `method must be one of: ${allowedMethods.join(", ").toUpperCase()}` }, 400);
+  }
+
+  const stub = {
+    openapi: "3.0.0",
+    info: { title: "Preview API", version: "0.0.1" },
+    paths: {
+      [path]: {
+        [method]: {
+          summary: `${method.toUpperCase()} ${path}`,
+          description: "Placeholder description — pay for full spec with custom details.",
+          responses: {
+            "200": { description: "Successful response" },
+          },
+        },
+      },
+    },
+  };
+
+  return c.json({
+    preview: true,
+    spec: stub,
+    generatedAt: new Date().toISOString(),
+    note: "Preview returns a stub for one endpoint. Pay for full spec with custom schemas, examples, and auth definitions.",
+  });
+});
+
 app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(

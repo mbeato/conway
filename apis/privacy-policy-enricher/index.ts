@@ -10,7 +10,7 @@ import { extractPayerWallet } from "../../shared/x402-wallet";
 import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { validateExternalUrl } from "../../shared/ssrf";
-import { fullEnrich, EnricherResult } from "./analyzer";
+import { fullEnrich, EnricherResult, GDPR_KEYWORDS, CCPA_KEYWORDS } from "./analyzer";
 
 const app = new Hono();
 const API_NAME = "privacy-policy-enricher";

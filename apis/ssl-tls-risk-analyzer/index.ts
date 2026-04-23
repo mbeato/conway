@@ -6,6 +6,7 @@ import { extractPayerWallet } from "../../shared/x402-wallet";
 import { spendCapMiddleware } from "../../shared/spend-cap";
 import { rateLimit } from "../../shared/rate-limit";
 import { analyzeRisk } from "./analyzer";
+import tls from "node:tls";
 
 const app = new Hono();
 const API_NAME = "ssl-tls-risk-analyzer";
@@ -91,6 +92,84 @@ app.get("/", (c) => {
     },
     pricing: { pricePerCall: PRICE, description: "Comprehensive SSL/TLS risk audit with multi-source aggregation and scoring." }
   });
+});
+
+// Free preview — cert expiry + issuer only (no payment required)
+app.get("/preview", rateLimit("ssl-tls-risk-analyzer-preview", 30, 60_000), async (c) => {
+  const hostRaw = c.req.query("host");
+  if (!hostRaw || typeof hostRaw !== "string") {
+    return c.json({ error: "Provide ?host=example.com parameter" }, 400);
+  }
+  if (hostRaw.length > 256) {
+    return c.json({ error: "Host parameter exceeds maximum length" }, 400);
+  }
+
+  // Extract hostname (strip scheme/path if a URL was passed)
+  let hostname = hostRaw.trim();
+  try {
+    if (/^https?:\/\//i.test(hostname)) {
+      hostname = new URL(hostname).hostname;
+    } else {
+      // Strip any trailing path
+      hostname = hostname.split("/")[0];
+    }
+  } catch {
+    return c.json({ error: "Invalid host parameter" }, 400);
+  }
+
+  if (!/^[a-zA-Z0-9.-]+$/.test(hostname) || hostname.length < 3) {
+    return c.json({ error: "Invalid hostname" }, 400);
+  }
+
+  try {
+    const cert = await new Promise<tls.PeerCertificate>((resolve, reject) => {
+      const socket = tls.connect(
+        {
+          host: hostname,
+          port: 443,
+          servername: hostname,
+          timeout: 5000,
+          rejectUnauthorized: false,
+        },
+        () => {
+          const c = socket.getPeerCertificate();
+          socket.end();
+          if (!c || Object.keys(c).length === 0) {
+            reject(new Error("No certificate received"));
+          } else {
+            resolve(c);
+          }
+        }
+      );
+      socket.on("error", (err) => reject(err));
+      socket.on("timeout", () => {
+        socket.destroy();
+        reject(new Error("TLS connection timeout"));
+      });
+    });
+
+    const validTo = cert.valid_to || "";
+    const validToMs = validTo ? Date.parse(validTo) : NaN;
+    const daysRemaining = Number.isFinite(validToMs)
+      ? Math.floor((validToMs - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
+    const issuer = cert.issuer?.O || cert.issuer?.CN || "";
+
+    return c.json({
+      host: hostname,
+      preview: true,
+      data: { validTo, daysRemaining, issuer },
+      note: "Preview returns cert expiry and issuer only. Pay for full protocol audit, CT-log check, and risk scoring.",
+    });
+  } catch (e: any) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({
+      host: hostname,
+      preview: true,
+      error: msg,
+      note: "Preview returns cert expiry and issuer only. Pay for full protocol audit, CT-log check, and risk scoring.",
+    });
+  }
 });
 
 app.use("*", spendCapMiddleware());

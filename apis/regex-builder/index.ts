@@ -52,6 +52,54 @@ app.get("/", (c) => {
   });
 });
 
+// Free preview (no payment required) — matches common patterns via keyword lookup
+app.get("/preview", rateLimit("regex-builder-preview", 30, 60_000), async (c) => {
+  const description = c.req.query("description");
+  const PREVIEW_PATTERNS: Record<string, { pattern: string; flags: string; sample: string }> = {
+    email: { pattern: "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}", flags: "g", sample: "user@example.com" },
+    phone: { pattern: "\\+?[0-9]{1,3}?[-. ]?\\(?[0-9]{1,4}\\)?[-. ]?[0-9]{1,4}[-. ]?[0-9]{1,9}", flags: "g", sample: "+1 (555) 123-4567" },
+    url: { pattern: "https?:\\/\\/[^\\s/$.?#].[^\\s]*", flags: "gi", sample: "https://example.com/path" },
+    date: { pattern: "\\b\\d{4}-\\d{2}-\\d{2}\\b", flags: "g", sample: "2026-04-23" },
+    number: { pattern: "-?\\d+(?:\\.\\d+)?", flags: "g", sample: "42, -3.14, 100" },
+  };
+
+  if (!description) {
+    return c.json({
+      preview: true,
+      supported: Object.keys(PREVIEW_PATTERNS),
+      usage: "GET /preview?description=... — mention one of the supported keywords in your description",
+      note: "Preview matches common patterns (email, phone, url, date, number) via keyword lookup. Pay for OpenAI-generated regex from any natural-language description.",
+    });
+  }
+
+  if (description.length > 200) {
+    return c.json({ error: "description too long (max 200 chars)" }, 400);
+  }
+
+  const desc = description.toLowerCase();
+  const matched: Array<{ keyword: string; pattern: string; flags: string; regex: string; sample: string }> = [];
+  for (const [keyword, entry] of Object.entries(PREVIEW_PATTERNS)) {
+    if (desc.includes(keyword)) {
+      matched.push({
+        keyword,
+        pattern: entry.pattern,
+        flags: entry.flags,
+        regex: `/${entry.pattern}/${entry.flags}`,
+        sample: entry.sample,
+      });
+    }
+  }
+
+  return c.json({
+    preview: true,
+    description,
+    matched,
+    supported: Object.keys(PREVIEW_PATTERNS),
+    generatedAt: new Date().toISOString(),
+    note: "Preview matches common patterns (email, phone, url, date, number) via keyword lookup. Pay for OpenAI-generated regex from any natural-language description.",
+  });
+});
+
 app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(

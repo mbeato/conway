@@ -126,6 +126,86 @@ app.get("/", (c) => {
   return c.json(docs);
 });
 
+// 5b. Free preview — describe a single schema (no diff, no payment required)
+app.get("/preview", rateLimit("api-schema-diff-preview", 30, 60_000), async (c) => {
+  const schemaUrl = c.req.query("url") || c.req.query("schema");
+  if (!schemaUrl) {
+    return c.json({ error: "Provide ?url= parameter with a single schema URL" }, 400);
+  }
+
+  const check = validateExternalUrl(schemaUrl.trim());
+  if ("error" in check) {
+    return c.json({ error: `Invalid URL: ${check.error}` }, 400);
+  }
+
+  try {
+    const res = await safeFetch(check.url.toString(), {
+      timeoutMs: 5000,
+      headers: { "User-Agent": "api-schema-diff/1.0 apimesh.xyz" },
+    });
+    if (!res.ok) {
+      return c.json({ error: `Failed to fetch schema: HTTP ${res.status}` }, 200);
+    }
+    const text = await res.text();
+    const sizeBytes = text.length;
+    if (sizeBytes > 500_000) {
+      return c.json({
+        url: schemaUrl,
+        preview: true,
+        data: { format: "too_large", sizeBytes },
+        note: "Preview describes a single schema. Pay for diff, compatibility scoring, and evolution analysis.",
+      });
+    }
+
+    let format: string = "unknown";
+    let version: string | undefined;
+    let endpointCount: number | undefined;
+
+    // GraphQL SDL detection (text-based, before JSON parse)
+    if (/\btype\s+Query\b/.test(text)) {
+      format = "graphql";
+      const typeMatches = text.match(/\btype\s+\w+/g);
+      if (typeMatches) endpointCount = typeMatches.length;
+    } else {
+      let parsed: any;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        return c.json({
+          url: schemaUrl,
+          preview: true,
+          data: { format: "unknown", sizeBytes, note: "YAML or non-JSON formats require paid /compare" },
+          note: "Preview describes a single schema. Pay for diff, compatibility scoring, and evolution analysis.",
+        });
+      }
+      if (parsed && typeof parsed === "object") {
+        if (typeof parsed.openapi === "string") {
+          format = "openapi_3";
+          version = parsed.openapi;
+          endpointCount = parsed.paths && typeof parsed.paths === "object" ? Object.keys(parsed.paths).length : 0;
+        } else if (typeof parsed.swagger === "string") {
+          format = "openapi_2";
+          version = parsed.swagger;
+          endpointCount = parsed.paths && typeof parsed.paths === "object" ? Object.keys(parsed.paths).length : 0;
+        } else if (typeof parsed.$schema === "string") {
+          format = "json_schema";
+          version = parsed.$schema;
+        }
+      }
+    }
+
+    return c.json({
+      url: schemaUrl,
+      preview: true,
+      data: { format, version, endpointCount, sizeBytes },
+      note: "Preview describes a single schema. Pay for diff, compatibility scoring, and evolution analysis.",
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({ error: "Preview fetch failed", detail: msg }, 200);
+  }
+});
+
 // 6. Spend cap before payment middleware
 app.use("*", spendCapMiddleware());
 

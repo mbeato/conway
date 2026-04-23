@@ -38,6 +38,45 @@ app.get("/", (c) => {
   });
 });
 
+// Free preview — single /favicon.ico HEAD check (no multi-size resolution, no payment)
+app.get("/preview", rateLimit("favicon-checker-preview", 30, 60_000), async (c) => {
+  const rawUrl = c.req.query("url");
+  if (!rawUrl) {
+    return c.json({ error: "Missing ?url= (http(s)://...)" }, 400);
+  }
+
+  const check = validateExternalUrl(rawUrl.trim());
+  if ("error" in check) {
+    return c.json({ error: check.error }, 400);
+  }
+  const parsed = check.url;
+  parsed.hash = "";
+  parsed.search = "";
+
+  const testedOrigin = parsed.origin.replace(/^http:\/\//i, "https://");
+  const icoUrl = `${testedOrigin}/favicon.ico`;
+
+  let exists = false;
+  try {
+    const res = await fetch(icoUrl, {
+      method: "HEAD",
+      redirect: "manual",
+      signal: AbortSignal.timeout(5000),
+    });
+    exists = res.ok;
+  } catch {
+    exists = false;
+  }
+
+  return c.json({
+    exists,
+    url: icoUrl,
+    preview: true,
+    checkedAt: new Date().toISOString(),
+    note: "Preview checks /favicon.ico only. Pay for multi-size resolution, alt format detection, and apple-touch-icon.",
+  });
+});
+
 // Paid endpoint
 app.use("*", spendCapMiddleware());
 app.use(

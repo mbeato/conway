@@ -37,6 +37,59 @@ app.get("/", (c) => {
   });
 });
 
+// Free preview — HSTS + CSP presence check only (no payment required)
+app.get("/preview", rateLimit("website-security-header-info-preview", 30, 60_000), async (c) => {
+  const rawUrl = c.req.query("url");
+  if (!rawUrl || typeof rawUrl !== "string") {
+    return c.json({ error: "Provide ?url=https://example.com parameter" }, 400);
+  }
+
+  const validationResult = validateExternalUrl(rawUrl);
+  if ("error" in validationResult) {
+    return c.json({ error: validationResult.error }, 400);
+  }
+
+  const { url } = validationResult;
+  const critical = [
+    "strict-transport-security",
+    "content-security-policy",
+    "x-content-type-options",
+    "x-frame-options",
+    "referrer-policy",
+  ];
+
+  try {
+    const res = await safeFetch(url.toString(), {
+      method: "HEAD",
+      timeoutMs: 5000,
+    });
+
+    const hstsPresent = !!res.headers.get("strict-transport-security");
+    const cspPresent =
+      !!res.headers.get("content-security-policy") ||
+      !!res.headers.get("content-security-policy-report-only");
+    const missingCount = critical.filter((h) => {
+      if (h === "content-security-policy") return !cspPresent;
+      return !res.headers.get(h);
+    }).length;
+
+    return c.json({
+      url: url.toString(),
+      preview: true,
+      data: { hstsPresent, cspPresent, missingCount },
+      note: "Preview flags HSTS + CSP. Pay for full scoring across 15+ headers with remediation tips.",
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return c.json({
+      url: url.toString(),
+      preview: true,
+      error: msg,
+      note: "Preview flags HSTS + CSP. Pay for full scoring across 15+ headers with remediation tips.",
+    });
+  }
+});
+
 // 7. Spend cap middleware
 app.use("*", spendCapMiddleware());
 

@@ -53,8 +53,8 @@ function gradeFromScore(score: number): Grade {
 }
 
 // Basic keyword sets for detection
-const GDPR_KEYWORDS = ["gdpr", "general data protection regulation", "european union", "eu privacy", "data subject rights"];
-const CCPA_KEYWORDS = ["ccpa", "california consumer privacy act", "california", "consumer rights"];
+export const GDPR_KEYWORDS = ["gdpr", "general data protection regulation", "european union", "eu privacy", "data subject rights"];
+export const CCPA_KEYWORDS = ["ccpa", "california consumer privacy act", "california", "consumer rights"];
 const DATA_SHARING_KEYWORDS = ["share", "third party", "partner", "affiliate", "advertising network", "analytics", "tracking", "cookie", "pixel"];
 const DATA_TYPES = ["email", "ip address", "location", "phone number", "cookies", "browsing history", "usage data"];
 const PRIVACY_FEATURES_KEYWORDS = {

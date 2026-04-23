@@ -60,6 +60,36 @@ app.get("/", (c) => {
   });
 });
 
+// Free preview (no payment required) — 60-second JWT with fixed preview secret
+app.get("/preview", rateLimit("mock-jwt-generator-preview", 30, 60_000), async (c) => {
+  const sub = c.req.query("sub");
+  if (!sub) {
+    return c.json({ error: "Provide ?sub= parameter (subject claim, 1-100 chars)" }, 400);
+  }
+  if (sub.length < 1 || sub.length > 100) {
+    return c.json({ error: "sub must be 1-100 characters" }, 400);
+  }
+
+  const PREVIEW_SECRET = "preview-only-not-for-production";
+  const iat = Math.floor(Date.now() / 1000);
+  const exp = iat + 60;
+  const payload = { sub, iat, exp };
+  const header = { alg: "HS256", typ: "JWT" };
+
+  const { token, error } = await generateMockJwt(payload, PREVIEW_SECRET, header);
+  if (error) return c.json({ error }, 500);
+
+  return c.json({
+    preview: true,
+    token,
+    header,
+    payload,
+    secret: PREVIEW_SECRET,
+    generatedAt: new Date().toISOString(),
+    note: "Preview generates a 60-second JWT with fixed preview secret. Pay for custom secret, algorithm choice, and long expiries.",
+  });
+});
+
 // Payment — /generate is paid
 app.use("*", spendCapMiddleware());
 app.use(

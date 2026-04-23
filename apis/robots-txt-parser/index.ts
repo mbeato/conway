@@ -39,6 +39,62 @@ app.get("/", (c) => {
   });
 });
 
+// Free preview — existence + rule count only (no payment required)
+app.get("/preview", rateLimit("robots-txt-parser-preview", 30, 60_000), async (c) => {
+  const urlParam = c.req.query("url");
+  if (!urlParam || typeof urlParam !== "string" || urlParam.length < 8) {
+    return c.json({ error: "Provide ?url=https://example.com parameter" }, 400);
+  }
+
+  const check = validateExternalUrl(urlParam);
+  if ("error" in check) {
+    return c.json({ error: check.error }, 400);
+  }
+
+  const robotsUrl = check.url;
+  robotsUrl.pathname = "/robots.txt";
+  robotsUrl.search = "";
+  robotsUrl.hash = "";
+
+  try {
+    const res = await safeFetch(robotsUrl.toString(), {
+      timeoutMs: 5000,
+      headers: { "User-Agent": "robots-txt-parser/1.0 apimesh.xyz" },
+    });
+
+    if (!res.ok) {
+      return c.json({
+        url: robotsUrl.toString(),
+        preview: true,
+        data: { exists: false, sizeBytes: 0, ruleCount: 0 },
+        note: "Preview returns existence + rule count. Pay for full parsed rules, sitemap extraction, and user-agent grouping.",
+      });
+    }
+
+    const text = await res.text();
+    const sizeBytes = text.length;
+    const ruleCount = text
+      .split(/\r?\n/)
+      .filter((l) => /^\s*(allow|disallow)\s*:/i.test(l)).length;
+
+    return c.json({
+      url: robotsUrl.toString(),
+      preview: true,
+      data: { exists: true, sizeBytes, ruleCount },
+      note: "Preview returns existence + rule count. Pay for full parsed rules, sitemap extraction, and user-agent grouping.",
+    });
+  } catch (e: any) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return c.json({
+      url: robotsUrl.toString(),
+      preview: true,
+      data: { exists: false, sizeBytes: 0, ruleCount: 0 },
+      error: msg,
+      note: "Preview returns existence + rule count. Pay for full parsed rules, sitemap extraction, and user-agent grouping.",
+    });
+  }
+});
+
 app.use("*", spendCapMiddleware());
 app.use(
   paymentMiddleware(
