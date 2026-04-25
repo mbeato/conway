@@ -71,6 +71,8 @@ import { app as contentSecurityPolicyCheck } from "./content-security-policy-che
 import { app as apiEndpointDiscovery } from "./api-endpoint-discovery/index";
 import { app as siteSecurityBaseline } from "./site-security-baseline/index";
 import { app as dnsPropagationInspector } from "./dns-propagation-inspector/index";
+import { app as crossOriginResourcePolicymapper } from "./cross-origin-resource-policymapper/index";
+
 
 
 
@@ -198,4 +200,5 @@ export const registry: Record<string, Hono> = {
   "api-endpoint-discovery": apiEndpointDiscovery,
   "site-security-baseline": siteSecurityBaseline,
   "dns-propagation-inspector": dnsPropagationInspector,
+  "cross-origin-resource-policymapper": crossOriginResourcePolicymapper,
 };
