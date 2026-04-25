@@ -72,6 +72,8 @@ import { app as apiEndpointDiscovery } from "./api-endpoint-discovery/index";
 import { app as siteSecurityBaseline } from "./site-security-baseline/index";
 import { app as dnsPropagationInspector } from "./dns-propagation-inspector/index";
 import { app as crossOriginResourcePolicymapper } from "./cross-origin-resource-policymapper/index";
+import { app as apiStandardCompliance } from "./api-standard-compliance/index";
+
 
 
 
@@ -201,4 +203,5 @@ export const registry: Record<string, Hono> = {
   "site-security-baseline": siteSecurityBaseline,
   "dns-propagation-inspector": dnsPropagationInspector,
   "cross-origin-resource-policymapper": crossOriginResourcePolicymapper,
+  "api-standard-compliance": apiStandardCompliance,
 };
