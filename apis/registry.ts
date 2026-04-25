@@ -68,6 +68,8 @@ import { app as performanceSecurityComplianceReport } from "./performance-securi
 import { app as sslExpiryForecast } from "./ssl-expiry-forecast/index";
 import { app as apiResponseHeuristics } from "./api-response-heuristics/index";
 import { app as contentSecurityPolicyCheck } from "./content-security-policy-check/index";
+import { app as apiEndpointDiscovery } from "./api-endpoint-discovery/index";
+
 
 
 
@@ -189,4 +191,5 @@ export const registry: Record<string, Hono> = {
   "ssl-expiry-forecast": sslExpiryForecast,
   "api-response-heuristics": apiResponseHeuristics,
   "content-security-policy-check": contentSecurityPolicyCheck,
+  "api-endpoint-discovery": apiEndpointDiscovery,
 };
