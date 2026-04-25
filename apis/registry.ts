@@ -70,6 +70,8 @@ import { app as apiResponseHeuristics } from "./api-response-heuristics/index";
 import { app as contentSecurityPolicyCheck } from "./content-security-policy-check/index";
 import { app as apiEndpointDiscovery } from "./api-endpoint-discovery/index";
 import { app as siteSecurityBaseline } from "./site-security-baseline/index";
+import { app as dnsPropagationInspector } from "./dns-propagation-inspector/index";
+
 
 
 
@@ -195,4 +197,5 @@ export const registry: Record<string, Hono> = {
   "content-security-policy-check": contentSecurityPolicyCheck,
   "api-endpoint-discovery": apiEndpointDiscovery,
   "site-security-baseline": siteSecurityBaseline,
+  "dns-propagation-inspector": dnsPropagationInspector,
 };
