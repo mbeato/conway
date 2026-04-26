@@ -53,7 +53,11 @@ router.get("/health", (c) => {
   return c.json({ status: "ok" });
 });
 
-// Serve .well-known/x402 per subdomain so x402 scanners can discover paid routes
+// Serve .well-known/x402 per subdomain so x402 scanners can discover paid routes.
+// subdomainRoutes is the curated list for hand-built APIs that have non-standard
+// paths (POST /build, GET /analyze, etc.). Brain-built APIs follow the
+// convention `GET /check` (or analogous single endpoint) — for any registered
+// subdomain not in subdomainRoutes, return that default so discovery doesn't 404.
 router.get("/.well-known/x402", (c) => {
   const host = c.req.header("host") ?? "";
   const subdomain = extractSubdomain(host);
@@ -61,8 +65,10 @@ router.get("/.well-known/x402", (c) => {
   if (subdomain && subdomainRoutes[subdomain]) {
     return c.json({ version: 1, resources: subdomainRoutes[subdomain] });
   }
+  if (subdomain && registry[subdomain]) {
+    return c.json({ version: 1, resources: ["GET /check"] });
+  }
 
-  // No subdomain or unknown — return empty discovery
   return c.json({ version: 1, resources: [] }, 404);
 });
 

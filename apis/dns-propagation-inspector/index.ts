@@ -65,7 +65,6 @@ app.get("/", (c) => {
           api: API_NAME,
           status: "healthy",
           version: API_VERSION,
-          docs,
           pricing: PRICE,
         },
       },
