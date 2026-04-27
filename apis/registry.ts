@@ -81,6 +81,8 @@ import { app as websiteCspViolationReport } from "./website-csp-violation-report
 import { app as apiTechnologyHeaders } from "./api-technology-headers/index";
 import { app as apiStructureValidator } from "./api-structure-validator/index";
 import { app as apiEndpointHeuristics } from "./api-endpoint-heuristics/index";
+import { app as apiEndpointDisclosure } from "./api-endpoint-disclosure/index";
+
 
 
 
@@ -228,4 +230,5 @@ export const registry: Record<string, Hono> = {
   "api-technology-headers": apiTechnologyHeaders,
   "api-structure-validator": apiStructureValidator,
   "api-endpoint-heuristics": apiEndpointHeuristics,
+  "api-endpoint-disclosure": apiEndpointDisclosure,
 };
