@@ -83,6 +83,8 @@ import { app as apiStructureValidator } from "./api-structure-validator/index";
 import { app as apiEndpointHeuristics } from "./api-endpoint-heuristics/index";
 import { app as apiEndpointDisclosure } from "./api-endpoint-disclosure/index";
 import { app as pagePerformanceMetrics } from "./page-performance-metrics/index";
+import { app as subdomainEnumAggregator } from "./subdomain-enum-aggregator/index";
+
 
 
 
@@ -234,4 +236,5 @@ export const registry: Record<string, Hono> = {
   "api-endpoint-heuristics": apiEndpointHeuristics,
   "api-endpoint-disclosure": apiEndpointDisclosure,
   "page-performance-metrics": pagePerformanceMetrics,
+  "subdomain-enum-aggregator": subdomainEnumAggregator,
 };
