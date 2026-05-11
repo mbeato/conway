@@ -67,13 +67,19 @@ apimesh.xyz {
         file_server
     }
 
-    # apex root → 301 to mbeato.dev/work/apimesh
-    # apimesh.xyz is no longer a marketing surface; it remains as the DNS chassis
-    # for wedge subdomains (agentsmd, stripesig, etc). The maker page lives on
-    # mbeato.dev where it doesn't compete with the personal portfolio.
+    # apex root → static wedge index (public/hub.html).
+    # The hub is a thin discovery surface that lists live wedges. It is
+    # intentionally distinct from mbeato.dev/work/apimesh (the case study /
+    # narrative — for people evaluating max). The hub is for people
+    # evaluating the tools themselves. Served straight from caddy with no
+    # bun hop so it stays fast.
     @landing path /
     handle @landing {
-        redir https://mbeato.dev/work/apimesh 301
+        root * /opt/conway-agent/public
+        rewrite * /hub.html
+        file_server
+        header Content-Type "text/html; charset=utf-8"
+        header Cache-Control "public, max-age=300"
     }
 
     handle /dashboard {

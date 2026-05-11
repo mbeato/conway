@@ -219,11 +219,25 @@ for (const page of LEGAL_PAGES) {
   });
 }
 
-// Apex root → 301 to mbeato.dev/work/apimesh.
-// apimesh.xyz is no longer a marketing surface (April 2026 pivot — see
-// MEMORY.md). The maker page lives on mbeato.dev. Caddy handles this in
-// production; this handler is the fallback for staging and local dev.
-app.get("/", publicLimit, (c) => c.redirect("https://mbeato.dev/work/apimesh", 301));
+// Apex root → static wedge hub (public/hub.html). Caddy serves this
+// directly on prod (apimesh.xyz block in Caddyfile); the bun handler is
+// the fallback path used by staging and local dev so all three surfaces
+// render the same page.
+app.get("/", publicLimit, async (c) => {
+  const file = Bun.file(join(import.meta.dir, "../../public/hub.html"));
+  if (await file.exists()) {
+    return new Response(await file.text(), {
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Content-Security-Policy": "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'",
+        "X-Frame-Options": "DENY",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
+  }
+  return c.text("hub not found", 404);
+});
 
 // Dashboard UI — public, no auth
 app.get("/dashboard", publicLimit, async (c) => {

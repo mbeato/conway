@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>apimesh — single-purpose dev tools</title>
+  <meta name="description" content="apimesh ships small, free dev tools. each one stands alone — its own subdomain, its own demo, no signup." />
+  <meta property="og:title" content="apimesh — single-purpose dev tools" />
+  <meta property="og:description" content="small things that solve one specific pain. free, open source, MIT." />
+  <link rel="canonical" href="https://apimesh.xyz/" />
+  <link rel="icon" type="image/svg+xml" href="/logo-nav.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #111111;
+      --border: #1c1c1c;
+      --border-hover: #2a2a2a;
+      --text: #e0e0e0;
+      --text-secondary: #777;
+      --text-dim: #555;
+      --accent: #3ddc84;
+      --accent-dim: rgba(61, 220, 132, 0.08);
+      --amber: #f0a030;
+      --serif: "Instrument Serif", Georgia, serif;
+      --sans: "DM Sans", -apple-system, sans-serif;
+      --mono: "JetBrains Mono", "SF Mono", monospace;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.55;
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* nav */
+    .nav {
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .nav-inner {
+      max-width: 1280px; margin: 0 auto;
+      padding: 16px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 500; letter-spacing: -0.01em;
+    }
+    .nav-brand img { border-radius: 4px; }
+    .nav-links {
+      display: flex; gap: 24px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-secondary); letter-spacing: 0.02em;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* hero */
+    .hero {
+      max-width: 1180px; margin: 0 auto;
+      padding: 96px 32px 56px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--accent); letter-spacing: 0.16em;
+      text-transform: uppercase; margin-bottom: 22px;
+    }
+    .hero h1 {
+      font-family: var(--serif); font-weight: 400;
+      font-size: clamp(48px, 7vw, 88px);
+      line-height: 1.04; letter-spacing: -0.012em;
+      margin: 0 auto 26px; max-width: 18ch;
+    }
+    .hero h1 em { font-style: italic; color: var(--accent); }
+    .hero p {
+      color: var(--text-secondary); font-size: 18px;
+      max-width: 56ch; margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* carousel */
+    .carousel-wrap {
+      padding: 64px 0 96px;
+      position: relative;
+      overflow: hidden;
+      /* edge fade — hint that the row extends beyond the viewport */
+      -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+              mask-image: linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%);
+    }
+    .carousel-eyebrow {
+      max-width: 1280px; margin: 0 auto 32px;
+      padding: 0 32px;
+      display: flex; align-items: baseline; justify-content: space-between;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--text-dim); letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+    .carousel-eyebrow .hint {
+      color: var(--text-dim);
+      letter-spacing: 0.06em; text-transform: none;
+      font-size: 11px;
+    }
+
+    .track {
+      display: flex; gap: 24px;
+      width: max-content;
+      animation: scrollLeft var(--cycle, 60s) linear infinite;
+      will-change: transform;
+    }
+    /* pause on hover or when an interactive child is focused */
+    .carousel-wrap:hover .track,
+    .carousel-wrap:focus-within .track { animation-play-state: paused; }
+
+    @keyframes scrollLeft {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* wedge card */
+    .wedge {
+      flex: 0 0 auto;
+      width: 460px;
+      min-height: 280px;
+      padding: 28px 28px 24px;
+      display: flex; flex-direction: column;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      transition: border-color 0.2s, transform 0.2s, background 0.2s;
+      position: relative;
+    }
+    .wedge:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+    .wedge.live:hover { border-color: var(--accent); }
+
+    .wedge-head {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 14px;
+      font-family: var(--mono); font-size: 11px;
+      color: var(--text-dim); letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .wedge-num { color: var(--text-secondary); }
+
+    .wedge-status {
+      display: inline-flex; align-items: center; gap: 7px;
+      letter-spacing: 0.16em;
+    }
+    .wedge-status .pip {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .wedge.soon .wedge-status { color: var(--text-dim); }
+    .wedge.soon .wedge-status .pip {
+      background: transparent; border: 1px solid var(--text-dim);
+      box-shadow: none;
+    }
+
+    .wedge h2 {
+      font-family: var(--serif); font-weight: 400;
+      font-size: 36px; line-height: 1.04;
+      letter-spacing: -0.01em;
+      margin: 0 0 14px;
+      color: var(--text);
+    }
+    .wedge.soon h2 { color: var(--text-secondary); }
+
+    .wedge-scope {
+      color: var(--text-secondary);
+      font-size: 14px; line-height: 1.55;
+      margin: 0;
+      flex: 1;
+    }
+    .wedge.soon .wedge-scope { color: var(--text-dim); }
+
+    .wedge-foot {
+      margin-top: 22px;
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-dim);
+    }
+    .wedge-foot .install {
+      color: var(--text-secondary);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      padding: 5px 10px; border-radius: 4px;
+      letter-spacing: 0;
+    }
+    .wedge-foot .install .prompt { color: var(--text-dim); margin-right: 4px; }
+    .wedge-foot .arrow {
+      color: var(--text-secondary);
+      transition: color 0.15s, transform 0.15s;
+    }
+    .wedge.live:hover .arrow { color: var(--accent); transform: translateX(4px); }
+    .wedge.soon .arrow { color: var(--text-dim); }
+
+    /* footer */
+    footer {
+      max-width: 1280px; margin: 0 auto;
+      padding: 32px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-dim); letter-spacing: 0.02em;
+    }
+    footer a { color: var(--text-secondary); }
+    footer a:hover { color: var(--text); }
+
+    /* reduced motion — kill the animation, let cards wrap */
+    @media (prefers-reduced-motion: reduce) {
+      .carousel-wrap {
+        -webkit-mask-image: none; mask-image: none;
+        overflow: visible;
+      }
+      .track {
+        animation: none;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 32px;
+      }
+      .wedge { width: min(460px, calc(50% - 12px)); }
+    }
+
+    @media (max-width: 760px) {
+      .hero { padding: 64px 22px 32px; }
+      .carousel-wrap { padding: 32px 0 64px; }
+      .wedge { width: 320px; min-height: 240px; padding: 22px; }
+      .wedge h2 { font-size: 28px; }
+      footer { padding: 24px 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <img src="/logo-nav.svg" alt="apimesh" width="28" height="28" />
+        <span>apimesh</span>
+      </div>
+      <div class="nav-links">
+        <a href="https://github.com/mbeato/conway">github</a>
+        <a href="https://www.npmjs.com/package/@mbeato/apimesh-mcp-server">npm</a>
+        <a href="https://mbeato.dev/work/apimesh">case study</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-eyebrow">// single-purpose dev tools</div>
+    <h1>small things that <em>solve one</em> specific pain.</h1>
+    <p>each wedge stands alone — its own subdomain, its own demo, no signup. free, open source, MIT.</p>
+  </section>
+
+  <section class="carousel-wrap" aria-label="apimesh wedges">
+    <div class="carousel-eyebrow">
+      <span>// wedges</span>
+      <span class="hint">hover to pause</span>
+    </div>
+
+    <div class="track" id="wedge-track">
+      <!--
+        SOURCE LIST. The JS at the bottom of the page clones this list
+        once so the CSS scroll animation loops seamlessly. To add a new
+        wedge: paste another <a class="wedge"> into THIS source list only.
+      -->
+      <a class="wedge live" href="https://agentsmd.apimesh.xyz" data-wedge="agentsmd">
+        <div class="wedge-head">
+          <span class="wedge-num">wedge.01</span>
+          <span class="wedge-status"><span class="pip"></span>live</span>
+        </div>
+        <h2>agentsmd</h2>
+        <p class="wedge-scope">sync <code style="font-family:var(--mono);font-size:13px;color:var(--accent);">AGENTS.md</code> → <code style="font-family:var(--mono);font-size:13px;color:var(--text);">CLAUDE.md</code>, <code style="font-family:var(--mono);font-size:13px;color:var(--text);">.cursorrules</code>, <code style="font-family:var(--mono);font-size:13px;color:var(--text);">.clinerules</code>, <code style="font-family:var(--mono);font-size:13px;color:var(--text);">.windsurfrules</code>. one source, every agent file in sync.</p>
+        <div class="wedge-foot">
+          <span class="install"><span class="prompt">$</span>bunx @mbeato/agentcontext</span>
+          <span class="arrow">→</span>
+        </div>
+      </a>
+
+      <a class="wedge live" href="https://stripesig.apimesh.xyz" data-wedge="stripesig">
+        <div class="wedge-head">
+          <span class="wedge-num">wedge.02</span>
+          <span class="wedge-status"><span class="pip"></span>live</span>
+        </div>
+        <h2>stripesig</h2>
+        <p class="wedge-scope">paste a failing webhook (stripe, github, slack, shopify). get the actual reason and the actual fix in 5 seconds — no spelunking through dashboards.</p>
+        <div class="wedge-foot">
+          <span class="install"><span class="prompt">↗</span>stripesig.apimesh.xyz</span>
+          <span class="arrow">→</span>
+        </div>
+      </a>
+
+      <a class="wedge soon" href="https://github.com/mbeato/conway" data-wedge="next" aria-label="next wedge — coming soon">
+        <div class="wedge-head">
+          <span class="wedge-num">wedge.03</span>
+          <span class="wedge-status"><span class="pip"></span>soon</span>
+        </div>
+        <h2>— next wedge</h2>
+        <p class="wedge-scope">the next pain that earns its own URL. wedges land when the pain is real, not before. open the source if you want to suggest one.</p>
+        <div class="wedge-foot">
+          <span class="install"><span class="prompt">$</span>open an issue</span>
+          <span class="arrow">·</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <footer>
+    <span>made by max — <a href="https://mbeato.dev">mbeato.dev</a> · also building <a href="https://tonos.fyi">tonos.fyi</a> (voice profile api)</span>
+    <span>part of <a href="https://github.com/mbeato/conway">apimesh/conway</a> · MIT</span>
+  </footer>
+
+  <script>
+    // Seamless infinite scroll: clone the wedge list once so the CSS
+    // translateX(-50%) animation lands exactly on the start of the
+    // duplicated set. Only the SOURCE list above needs editing.
+    (function () {
+      const track = document.getElementById('wedge-track');
+      if (!track) return;
+      const items = Array.from(track.children);
+      // Mark the clones aria-hidden so screen readers don't see duplicates.
+      items.forEach((node) => {
+        const clone = node.cloneNode(true);
+        clone.setAttribute('aria-hidden', 'true');
+        clone.setAttribute('tabindex', '-1');
+        track.appendChild(clone);
+      });
+
+      // Scale the animation duration with the number of source wedges so
+      // adding more wedges doesn't speed the carousel up. Roughly 14s per
+      // card feels right at desktop card widths.
+      const SECONDS_PER_WEDGE = 14;
+      track.style.setProperty('--cycle', (items.length * SECONDS_PER_WEDGE) + 's');
+    }());
+  </script>
+
+</body>
+</html>
